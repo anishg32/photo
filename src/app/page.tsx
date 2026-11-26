@@ -71,26 +71,35 @@ async function DynamicPortfolioSections() {
 }
 
 function HomeFallback() {
+  const featured = INITIAL_GALLERY_IMAGES.filter((i) => i.featured);
+  const exhibitionPool = featured.length >= 3 ? featured : INITIAL_GALLERY_IMAGES;
+  const heroImageUrl =
+    DEFAULT_SITE_SETTINGS.heroImageUrl || exhibitionPool[0]?.imageUrl || "";
+  const floatingImages = exhibitionPool
+    .slice(0, 3)
+    .map((i) => i.thumbnailUrl || i.imageUrl)
+    .filter(Boolean);
+
   return (
     <>
       <HeroSection
         brandName={DEFAULT_SITE_SETTINGS.brandName}
         tagline={DEFAULT_SITE_SETTINGS.tagline}
         supportingText={DEFAULT_SITE_SETTINGS.supportingText}
-        heroImageUrl=""
-        floatingImages={[]}
+        heroImageUrl={heroImageUrl}
+        floatingImages={floatingImages}
       />
       <AboutSection
         headline={DEFAULT_SITE_SETTINGS.aboutHeadline}
         bio={DEFAULT_SITE_SETTINGS.aboutBio}
-        aboutImageUrl=""
+        aboutImageUrl={DEFAULT_SITE_SETTINGS.aboutImageUrl}
       />
       <CategoriesSection categories={INITIAL_CATEGORIES} />
       <FeaturedGallerySection
         images={INITIAL_GALLERY_IMAGES}
         categories={INITIAL_CATEGORIES}
       />
-      <VirtualMuseumSection images={INITIAL_GALLERY_IMAGES} />
+      <VirtualMuseumSection images={exhibitionPool} />
       <StoriesSection stories={INITIAL_STORIES} />
       <ServicesSection
         services={DEFAULT_SITE_SETTINGS.services}

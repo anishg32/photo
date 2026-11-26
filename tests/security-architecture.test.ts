@@ -10,7 +10,7 @@ import {
 } from "../src/lib/studio-catalog";
 
 describe("Security Rules & Studio Catalog Integrity", () => {
-  it("includes all 10 required photography categories ready for photographer uploads", () => {
+  it("includes all 10 required photography categories with unique cover images", () => {
     const slugs = INITIAL_CATEGORIES.map((c) => c.slug);
     expect(slugs).toEqual([
       "wedding",
@@ -25,9 +25,8 @@ describe("Security Rules & Studio Catalog Integrity", () => {
       "wildlife",
     ]);
 
-    for (const cat of INITIAL_CATEGORIES) {
-      expect(cat.coverImage).toBe("");
-    }
+    const uniqueCovers = new Set(INITIAL_CATEGORIES.map((c) => c.coverImage));
+    expect(uniqueCovers.size).toBe(10);
   });
 
   it("includes all 7 required services with no invented hardcoded pricing", () => {
@@ -39,13 +38,23 @@ describe("Security Rules & Studio Catalog Integrity", () => {
     expect(DEFAULT_SITE_SETTINGS.tagline).toBe("EVERY FRAME TELLS A STORY.");
   });
 
-  it("ensures pre-loaded sample photography has been removed", () => {
-    expect(INITIAL_GALLERY_IMAGES).toEqual([]);
-    expect(INITIAL_STORIES).toEqual([]);
+  it("verifies every referenced local sample photograph exists in public/", () => {
+    const publicDir = path.resolve(process.cwd(), "public");
+    const pathsToCheck = [
+      DEFAULT_SITE_SETTINGS.heroImageUrl || "",
+      DEFAULT_SITE_SETTINGS.aboutImageUrl || "",
+      ...INITIAL_CATEGORIES.map((c) => c.coverImage),
+      ...INITIAL_GALLERY_IMAGES.map((i) => i.imageUrl),
+      ...INITIAL_STORIES.map((s) => s.coverImage),
+    ].filter(Boolean);
 
-    const imagesDir = path.resolve(process.cwd(), "public", "images");
-    const entries = fs.existsSync(imagesDir) ? fs.readdirSync(imagesDir) : [];
-    expect(entries).toEqual([]);
+    expect(pathsToCheck.length).toBeGreaterThan(20);
+    for (const rel of pathsToCheck) {
+      const fullPath = path.join(publicDir, rel.replace(/^\//, ""));
+      expect(fs.existsSync(fullPath), `Missing image asset: ${rel}`).toBe(true);
+      const stat = fs.statSync(fullPath);
+      expect(stat.size).toBeGreaterThan(20_000);
+    }
   });
 
   it("enforces strict Firestore & Storage security rules", () => {

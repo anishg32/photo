@@ -2,9 +2,21 @@
 
 import { useState, type FormEvent } from "react";
 import Image from "next/image";
-import { Trash2, Star, Eye, EyeOff, ArrowUp, ArrowDown, Edit3 } from "lucide-react";
+import {
+  Trash2,
+  Star,
+  Eye,
+  EyeOff,
+  ArrowUp,
+  ArrowDown,
+  Edit3,
+  Images,
+  Plus,
+  Database,
+} from "lucide-react";
 import type { Category, GalleryImage } from "@/types";
 import { ImageUploadField } from "./ImageUploadField";
+import { ReplacePictureButton } from "./ReplacePictureButton";
 
 interface GalleryManagerPanelProps {
   items: GalleryImage[];
@@ -17,6 +29,7 @@ export function GalleryManagerPanel({
   categories,
   onRefresh,
 }: GalleryManagerPanelProps) {
+  const [mode, setMode] = useState<"single" | "batch">("single");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -34,6 +47,19 @@ export function GalleryManagerPanel({
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
+  // Batch upload state
+  const [batchCategoryId, setBatchCategoryId] = useState(
+    categories[0]?.id || ""
+  );
+  const [batchLocation, setBatchLocation] = useState("Studio Archive");
+  const [batchDate, setBatchDate] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
+  const [batchFeatured, setBatchFeatured] = useState(false);
+  const [batchPublished, setBatchPublished] = useState(true);
+  const [batchStatus, setBatchStatus] = useState<string | null>(null);
+  const [batchBusy, setBatchBusy] = useState(false);
+
   const resetForm = () => {
     setEditingId(null);
     setTitle("");
@@ -50,6 +76,7 @@ export function GalleryManagerPanel({
   };
 
   const startEdit = (img: GalleryImage) => {
+    setMode("single");
     setEditingId(img.id);
     setTitle(img.title);
     setDescription(img.description);
@@ -101,13 +128,115 @@ export function GalleryManagerPanel({
       if (!res.ok) {
         setFeedback(data.error || "Unable to save photograph.");
       } else {
-        setFeedback(editingId ? "Photograph updated." : "Photograph added to gallery.");
+        setFeedback(
+          editingId ? "Photograph updated." : "Photograph added to gallery."
+        );
         resetForm();
         await onRefresh();
       }
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleBatchFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!batchCategoryId) {
+      setBatchStatus("Please select a category before uploading pictures.");
+      return;
+    }
+
+    setBatchBusy(true);
+    const total = files.length;
+    let added = 0;
+    const cat = categories.find((c) => c.id === batchCategoryId);
+
+    for (let i = 0; i < total; i++) {
+      const file = files[i];
+      setBatchStatus(`Uploading picture ${i + 1} of ${total}: ${file.name}...`);
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "gallery");
+
+      const upRes = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const upJson = (await upRes.json().catch(() => ({}))) as {
+        error?: string;
+        imageUrl?: string;
+        thumbnailUrl?: string;
+        width?: number;
+        height?: number;
+      };
+
+      if (!upRes.ok || !upJson.imageUrl) {
+        setBatchStatus(
+          `Stopped on ${file.name}: ${upJson.error || "Upload failed."}`
+        );
+        setBatchBusy(false);
+        return;
+      }
+
+      const niceTitle = file.name
+        .replace(/\.[^.]+$/, "")
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
+      await fetch("/api/admin/gallery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: niceTitle || `Frame ${items.length + i + 1}`,
+          description: `${cat?.name || "Studio"} archival frame uploaded to MJ PHOTOGRAPHY.`,
+          imageUrl: upJson.imageUrl,
+          thumbnailUrl: upJson.thumbnailUrl || upJson.imageUrl,
+          categoryId: batchCategoryId,
+          categoryName: cat?.name,
+          categorySlug: cat?.slug,
+          location: batchLocation || "Studio Archive",
+          captureDate: batchDate || new Date().toISOString().slice(0, 10),
+          featured: batchFeatured,
+          published: batchPublished,
+          displayOrder: items.length + i + 1,
+          width: upJson.width ?? 1600,
+          height: upJson.height ?? 1200,
+        }),
+      });
+      added++;
+    }
+
+    setBatchBusy(false);
+    setBatchStatus(
+      `Successfully added ${added} of ${total} pictures to Firestore & Storage.`
+    );
+    await onRefresh();
+  };
+
+  const replaceImage = async (
+    img: GalleryImage,
+    replacement: {
+      imageUrl: string;
+      thumbnailUrl: string;
+      width: number;
+      height: number;
+    }
+  ) => {
+    await fetch("/api/admin/gallery", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: img.id,
+        imageUrl: replacement.imageUrl,
+        thumbnailUrl: replacement.thumbnailUrl,
+        width: replacement.width,
+        height: replacement.height,
+        replacePreviousImage: true,
+      }),
+    });
+    setFeedback(`Replaced picture for "${img.title}".`);
+    await onRefresh();
   };
 
   const toggleField = async (
@@ -129,204 +258,375 @@ export function GalleryManagerPanel({
     await onRefresh();
   };
 
+  const handleLoadSamples = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/seed", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as {
+        message?: string;
+        error?: string;
+      };
+      setFeedback(data.message || data.error || "Loaded sample catalog.");
+      await onRefresh();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-10">
-      <form
-        onSubmit={handleSubmit}
-        className="rounded-2xl border border-white/10 bg-[#111111] p-6 sm:p-8 space-y-5"
-      >
-        <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
-          <h2 className="font-editorial text-2xl text-white">
-            {editingId ? "Edit Photograph" : "Add New Photograph"}
-          </h2>
-          {editingId && (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="text-xs uppercase tracking-[0.14em] text-[#C6A46A] hover:text-white"
-            >
-              Cancel Edit
-            </button>
-          )}
+      {/* Mode Switcher: Add Single Picture vs Add Multiple Pictures */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("single")}
+            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs uppercase tracking-[0.16em] border min-h-[44px] ${
+              mode === "single"
+                ? "border-[#C6A46A] bg-[#C6A46A] text-[#080808] font-semibold"
+                : "border-white/15 text-[#A0A0A0] hover:text-white"
+            }`}
+          >
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            <span>{editingId ? "Edit Picture" : "Add Single Picture"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEditingId(null);
+              setMode("batch");
+            }}
+            className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs uppercase tracking-[0.16em] border min-h-[44px] ${
+              mode === "batch"
+                ? "border-[#C6A46A] bg-[#C6A46A] text-[#080808] font-semibold"
+                : "border-white/15 text-[#A0A0A0] hover:text-white"
+            }`}
+          >
+            <Images aria-hidden="true" className="h-4 w-4" />
+            <span>Add Multiple Pictures</span>
+          </button>
         </div>
 
-        <ImageUploadField
-          folder="gallery"
-          label="Upload High-Resolution Photograph"
-          onUploaded={(res) => {
-            setImageUrl(res.imageUrl);
-            setThumbnailUrl(res.thumbnailUrl);
-            setWidth(res.width);
-            setHeight(res.height);
-          }}
-        />
+        {items.length === 0 && (
+          <button
+            type="button"
+            onClick={handleLoadSamples}
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-full border border-[#C6A46A]/60 bg-[#C6A46A]/10 px-5 py-2.5 text-xs uppercase tracking-[0.16em] text-[#C6A46A] hover:bg-[#C6A46A] hover:text-[#080808] transition-colors min-h-[44px]"
+          >
+            <Database aria-hidden="true" className="h-4 w-4" />
+            <span>Load Sample Pictures to Firestore</span>
+          </button>
+        )}
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
-              Title *
-            </label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="studio-input w-full rounded-lg px-4 py-2.5 text-sm"
-            />
+      {mode === "batch" ? (
+        <div className="rounded-2xl border border-white/10 bg-[#111111] p-6 sm:p-8 space-y-5">
+          <div className="border-b border-white/10 pb-4">
+            <h2 className="font-editorial text-2xl text-white">
+              Add Multiple Pictures (Admin Batch Upload)
+            </h2>
+            <p className="text-xs text-[#A0A0A0] mt-1">
+              Select multiple original photos at once. Originals are stored
+              untouched in Firebase Storage while WebP thumbnails are generated
+              automatically.
+            </p>
           </div>
 
-          <div>
-            <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
-              Category *
-            </label>
-            <select
-              required
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="studio-select w-full rounded-lg px-4 py-2.5 text-sm"
-            >
-              <option value="">Select category...</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
-              Original Image URL *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Populated on upload or /images/..."
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              className="studio-input w-full rounded-lg px-4 py-2.5 text-sm font-mono text-xs"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
-              Thumbnail URL *
-            </label>
-            <input
-              type="text"
-              required
-              value={thumbnailUrl}
-              onChange={(e) => setThumbnailUrl(e.target.value)}
-              className="studio-input w-full rounded-lg px-4 py-2.5 text-sm font-mono text-xs"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
-              Capture Location *
-            </label>
-            <input
-              type="text"
-              required
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="studio-input w-full rounded-lg px-4 py-2.5 text-sm"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
-                Capture Date *
+                Category *
+              </label>
+              <select
+                value={batchCategoryId}
+                onChange={(e) => setBatchCategoryId(e.target.value)}
+                className="studio-select w-full rounded-lg px-4 py-2.5 text-sm"
+              >
+                <option value="">Select category...</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
+                Default Location
+              </label>
+              <input
+                type="text"
+                value={batchLocation}
+                onChange={(e) => setBatchLocation(e.target.value)}
+                className="studio-input w-full rounded-lg px-4 py-2.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
+                Capture Date
               </label>
               <input
                 type="date"
-                required
-                value={captureDate}
-                onChange={(e) => setCaptureDate(e.target.value)}
+                value={batchDate}
+                onChange={(e) => setBatchDate(e.target.value)}
                 className="studio-input w-full rounded-lg px-4 py-2.5 text-sm"
               />
             </div>
+          </div>
+
+          <div className="flex flex-wrap gap-6">
+            <label className="flex items-center gap-2 text-sm text-white">
+              <input
+                type="checkbox"
+                checked={batchFeatured}
+                onChange={(e) => setBatchFeatured(e.target.checked)}
+                className="h-4 w-4 accent-[#C6A46A]"
+              />
+              <span>Feature in Homepage &amp; 3D Gallery</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm text-white">
+              <input
+                type="checkbox"
+                checked={batchPublished}
+                onChange={(e) => setBatchPublished(e.target.checked)}
+                className="h-4 w-4 accent-[#C6A46A]"
+              />
+              <span>Publish Immediately</span>
+            </label>
+          </div>
+
+          <label
+            className={`flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#C6A46A]/55 bg-[#0a0a0a] px-6 py-8 text-center cursor-pointer hover:border-[#C6A46A] transition-colors ${
+              batchBusy ? "opacity-60 pointer-events-none" : ""
+            }`}
+          >
+            <Images aria-hidden="true" className="h-7 w-7 text-[#C6A46A]" />
+            <span className="text-xs font-mono uppercase tracking-[0.16em] text-[#C6A46A]">
+              {batchBusy
+                ? "Uploading & Creating Records..."
+                : "Choose Multiple Photographs to Add"}
+            </span>
+            <input
+              type="file"
+              multiple
+              disabled={batchBusy}
+              accept="image/jpeg,image/png,image/webp,image/avif,image/tiff"
+              onChange={(e) => {
+                const list = e.target.files;
+                handleBatchFiles(list);
+              }}
+              className="visually-hidden"
+            />
+          </label>
+
+          {batchStatus && (
+            <p className="text-xs font-mono text-[#C6A46A]">{batchStatus}</p>
+          )}
+        </div>
+      ) : (
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl border border-white/10 bg-[#111111] p-6 sm:p-8 space-y-5"
+        >
+          <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
+            <h2 className="font-editorial text-2xl text-white">
+              {editingId ? "Edit Photograph" : "Add New Picture"}
+            </h2>
+            {editingId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="text-xs uppercase tracking-[0.14em] text-[#C6A46A] hover:text-white"
+              >
+                Cancel Edit
+              </button>
+            )}
+          </div>
+
+          <ImageUploadField
+            folder="gallery"
+            label={
+              editingId
+                ? "Upload Replacement High-Resolution Picture"
+                : "Upload High-Resolution Picture"
+            }
+            onUploaded={(res) => {
+              setImageUrl(res.imageUrl);
+              setThumbnailUrl(res.thumbnailUrl);
+              setWidth(res.width);
+              setHeight(res.height);
+            }}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
-                Display Order
+                Title *
               </label>
               <input
-                type="number"
-                value={displayOrder}
-                onChange={(e) => setDisplayOrder(Number(e.target.value))}
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
                 className="studio-input w-full rounded-lg px-4 py-2.5 text-sm"
               />
             </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
+                Category *
+              </label>
+              <select
+                required
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="studio-select w-full rounded-lg px-4 py-2.5 text-sm"
+              >
+                <option value="">Select category...</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
+                Original Image URL *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Populated automatically on upload"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                className="studio-input w-full rounded-lg px-4 py-2.5 text-sm font-mono text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
+                Thumbnail URL *
+              </label>
+              <input
+                type="text"
+                required
+                value={thumbnailUrl}
+                onChange={(e) => setThumbnailUrl(e.target.value)}
+                className="studio-input w-full rounded-lg px-4 py-2.5 text-sm font-mono text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
+                Capture Location *
+              </label>
+              <input
+                type="text"
+                required
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="studio-input w-full rounded-lg px-4 py-2.5 text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
+                  Capture Date *
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={captureDate}
+                  onChange={(e) => setCaptureDate(e.target.value)}
+                  className="studio-input w-full rounded-lg px-4 py-2.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
+                  Display Order
+                </label>
+                <input
+                  type="number"
+                  value={displayOrder}
+                  onChange={(e) => setDisplayOrder(Number(e.target.value))}
+                  className="studio-input w-full rounded-lg px-4 py-2.5 text-sm"
+                />
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div>
-          <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
-            Description *
-          </label>
-          <textarea
-            required
-            rows={2}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="studio-textarea w-full rounded-lg px-4 py-2.5 text-sm"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
           <div>
             <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
-              Camera &amp; Lens Metadata
+              Description *
             </label>
-            <input
-              type="text"
-              placeholder="e.g. Hasselblad X2D · 80mm f/1.9"
-              value={cameraSpec}
-              onChange={(e) => setCameraSpec(e.target.value)}
-              className="studio-input w-full rounded-lg px-4 py-2.5 text-sm"
+            <textarea
+              required
+              rows={2}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="studio-textarea w-full rounded-lg px-4 py-2.5 text-sm"
             />
           </div>
 
-          <label className="flex items-center gap-2.5 text-sm text-white pt-4">
-            <input
-              type="checkbox"
-              checked={featured}
-              onChange={(e) => setFeatured(e.target.checked)}
-              className="h-4 w-4 accent-[#C6A46A]"
-            />
-            <span>Feature in Homepage &amp; 3D Museum</span>
-          </label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <div>
+              <label className="block text-xs uppercase tracking-[0.14em] text-[#CCCCCC] mb-1">
+                Camera &amp; Lens Metadata
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Hasselblad X2D · 80mm f/1.9"
+                value={cameraSpec}
+                onChange={(e) => setCameraSpec(e.target.value)}
+                className="studio-input w-full rounded-lg px-4 py-2.5 text-sm"
+              />
+            </div>
 
-          <label className="flex items-center gap-2.5 text-sm text-white pt-4">
-            <input
-              type="checkbox"
-              checked={published}
-              onChange={(e) => setPublished(e.target.checked)}
-              className="h-4 w-4 accent-[#C6A46A]"
-            />
-            <span>Published Publicly</span>
-          </label>
-        </div>
+            <label className="flex items-center gap-2.5 text-sm text-white pt-4">
+              <input
+                type="checkbox"
+                checked={featured}
+                onChange={(e) => setFeatured(e.target.checked)}
+                className="h-4 w-4 accent-[#C6A46A]"
+              />
+              <span>Feature in Homepage &amp; 3D Museum</span>
+            </label>
 
-        {feedback && (
-          <p className="text-xs font-mono text-[#C6A46A]">{feedback}</p>
-        )}
+            <label className="flex items-center gap-2.5 text-sm text-white pt-4">
+              <input
+                type="checkbox"
+                checked={published}
+                onChange={(e) => setPublished(e.target.checked)}
+                className="h-4 w-4 accent-[#C6A46A]"
+              />
+              <span>Published Publicly</span>
+            </label>
+          </div>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-full bg-[#C6A46A] text-[#080808] font-semibold px-7 py-3 text-xs uppercase tracking-[0.18em] hover:bg-[#d8b87d] disabled:opacity-60 min-h-[44px]"
-        >
-          {saving
-            ? "Saving..."
-            : editingId
-              ? "Update Photograph"
-              : "Publish Photograph"}
-        </button>
-      </form>
+          {feedback && (
+            <p className="text-xs font-mono text-[#C6A46A]">{feedback}</p>
+          )}
 
-      {/* Existing Photographs List */}
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-full bg-[#C6A46A] text-[#080808] font-semibold px-7 py-3 text-xs uppercase tracking-[0.18em] hover:bg-[#d8b87d] disabled:opacity-60 min-h-[44px]"
+          >
+            {saving
+              ? "Saving..."
+              : editingId
+                ? "Update Photograph"
+                : "Add Picture to Gallery"}
+          </button>
+        </form>
+      )}
+
+      {/* Existing Photographs Inventory with Instant Admin "Replace Picture" */}
       <div className="space-y-4">
         <h3 className="font-editorial text-2xl text-white">
           Archive Inventory ({items.length})
@@ -347,7 +647,7 @@ export function GalleryManagerPanel({
                 />
               </div>
 
-              <div className="flex-1 min-w-0 space-y-1">
+              <div className="flex-1 min-w-0 space-y-1.5">
                 <p className="font-editorial text-xl text-white truncate">
                   {img.title}
                 </p>
@@ -355,10 +655,17 @@ export function GalleryManagerPanel({
                   {img.categoryName || img.categoryId} · {img.location}
                 </p>
                 <p className="font-mono text-[11px] text-[#C6A46A]">
-                  Order #{img.displayOrder} · {img.published ? "Published" : "Draft"}
+                  Order #{img.displayOrder} ·{" "}
+                  {img.published ? "Published" : "Draft"}
                 </p>
 
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <ReplacePictureButton
+                    folder="gallery"
+                    label="Replace Picture"
+                    onReplaced={(res) => replaceImage(img, res)}
+                  />
+
                   <button
                     type="button"
                     onClick={() => toggleField(img, { featured: !img.featured })}
@@ -375,7 +682,9 @@ export function GalleryManagerPanel({
 
                   <button
                     type="button"
-                    onClick={() => toggleField(img, { published: !img.published })}
+                    onClick={() =>
+                      toggleField(img, { published: !img.published })
+                    }
                     aria-label={img.published ? "Unpublish image" : "Publish image"}
                     className="rounded-full px-2.5 py-1 text-[11px] border border-white/15 text-white/80 hover:border-[#C6A46A] inline-flex items-center gap-1"
                   >
@@ -434,4 +743,3 @@ export function GalleryManagerPanel({
     </div>
   );
 }
-

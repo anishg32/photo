@@ -6,6 +6,7 @@ import { Edit3, Eye, EyeOff, Trash2 } from "lucide-react";
 import type { Story } from "@/types";
 import { slugify } from "@/lib/validation";
 import { ImageUploadField } from "./ImageUploadField";
+import { ReplacePictureButton } from "./ReplacePictureButton";
 
 export function StoriesManagerPanel({
   stories,
@@ -85,6 +86,16 @@ export function StoriesManagerPanel({
     await fetch(`/api/admin/stories?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
+    await onRefresh();
+  };
+
+  const replaceStoryCover = async (id: string, imageUrl: string) => {
+    await fetch("/api/admin/stories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, coverImage: imageUrl }),
+    });
+    setFeedback("Updated story cover picture.");
     await onRefresh();
   };
 
@@ -257,7 +268,12 @@ export function StoriesManagerPanel({
                 {story.description}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <ReplacePictureButton
+                folder="stories"
+                label="Replace Cover"
+                onReplaced={(res) => replaceStoryCover(story.id, res.imageUrl)}
+              />
               <button
                 type="button"
                 onClick={() => togglePublish(story)}

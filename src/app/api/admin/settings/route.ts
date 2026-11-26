@@ -56,3 +56,46 @@ export async function PUT(request: Request) {
   return NextResponse.json({ ok: true });
 }
 
+export async function PATCH(request: Request) {
+  const admin = await verifyAdminRequest(request);
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
+  if (!body) {
+    return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
+  }
+
+  const db = getAdminDb();
+  if (!db) {
+    return NextResponse.json(
+      { error: "Firebase Admin Firestore is not configured." },
+      { status: 503 }
+    );
+  }
+
+  const updates: Record<string, unknown> = {
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (typeof body.heroImageUrl === "string") {
+    updates.heroImageUrl = body.heroImageUrl.trim();
+  }
+  if (typeof body.aboutImageUrl === "string") {
+    updates.aboutImageUrl = body.aboutImageUrl.trim();
+  }
+
+  await db
+    .collection("site_settings")
+    .doc("main")
+    .set(updates, { merge: true });
+
+  revalidatePath("/");
+  revalidatePath("/about");
+
+  return NextResponse.json({ ok: true });
+}
+

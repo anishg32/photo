@@ -99,6 +99,14 @@ export async function PATCH(request: Request) {
   if (typeof body?.title === "string") allowedUpdates.title = body.title.trim();
   if (typeof body?.description === "string")
     allowedUpdates.description = body.description.trim();
+  if (typeof body?.imageUrl === "string" && body.imageUrl.trim())
+    allowedUpdates.imageUrl = body.imageUrl.trim();
+  if (typeof body?.thumbnailUrl === "string" && body.thumbnailUrl.trim())
+    allowedUpdates.thumbnailUrl = body.thumbnailUrl.trim();
+  if (typeof body?.width === "number" && body.width > 0)
+    allowedUpdates.width = body.width;
+  if (typeof body?.height === "number" && body.height > 0)
+    allowedUpdates.height = body.height;
   if (typeof body?.location === "string")
     allowedUpdates.location = body.location.trim();
   if (typeof body?.captureDate === "string")
@@ -123,11 +131,28 @@ export async function PATCH(request: Request) {
     }
   }
 
-  await db.collection("gallery_images").doc(id).update(allowedUpdates);
+  const docRef = db.collection("gallery_images").doc(id);
+  const existingSnap = await docRef.get();
+  const prevData = existingSnap.exists ? existingSnap.data() : null;
+
+  await docRef.update(allowedUpdates);
+
+  if (
+    body?.replacePreviousImage === true &&
+    prevData &&
+    typeof allowedUpdates.imageUrl === "string" &&
+    prevData.imageUrl !== allowedUpdates.imageUrl
+  ) {
+    await deleteStorageObjectsByUrls([
+      String(prevData.imageUrl ?? ""),
+      String(prevData.thumbnailUrl ?? ""),
+    ]);
+  }
 
   revalidatePath("/");
   revalidatePath("/gallery");
   revalidatePath("/categories");
+  revalidatePath("/exhibition");
 
   return NextResponse.json({ ok: true });
 }

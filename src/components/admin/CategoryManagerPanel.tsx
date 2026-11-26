@@ -6,6 +6,7 @@ import { Edit3, Trash2 } from "lucide-react";
 import type { Category } from "@/types";
 import { slugify } from "@/lib/validation";
 import { ImageUploadField } from "./ImageUploadField";
+import { ReplacePictureButton } from "./ReplacePictureButton";
 
 export function CategoryManagerPanel({
   categories,
@@ -66,6 +67,16 @@ export function CategoryManagerPanel({
     await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
+    await onRefresh();
+  };
+
+  const replaceCategoryCover = async (id: string, imageUrl: string) => {
+    await fetch("/api/admin/categories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, coverImage: imageUrl }),
+    });
+    setFeedback("Updated category cover picture.");
     await onRefresh();
   };
 
@@ -194,16 +205,23 @@ export function CategoryManagerPanel({
                 </span>
               )}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0 space-y-1.5">
               <p className="font-editorial text-xl text-white truncate">
                 {cat.name}
               </p>
               <p className="font-mono text-[11px] text-[#C6A46A]">
                 /{cat.slug} · Order #{cat.displayOrder}
               </p>
-              <p className="text-xs text-[#A0A0A0] line-clamp-1 mt-1">
+              <p className="text-xs text-[#A0A0A0] line-clamp-1">
                 {cat.description}
               </p>
+              <div className="pt-1">
+                <ReplacePictureButton
+                  folder="categories"
+                  label="Replace Cover"
+                  onReplaced={(res) => replaceCategoryCover(cat.id, res.imageUrl)}
+                />
+              </div>
             </div>
             <div className="flex gap-1.5">
               <button

@@ -6,6 +6,9 @@ import { POST as submitBooking } from "../src/app/api/bookings/route";
 import { GET as getPublicGallery } from "../src/app/api/gallery/route";
 import { GET as getAdminOverview } from "../src/app/api/admin/overview/route";
 import { GET as getAdminBookings } from "../src/app/api/admin/bookings/route";
+import { PATCH as patchAdminGallery, POST as postAdminGallery } from "../src/app/api/admin/gallery/route";
+import { PATCH as patchAdminCategories } from "../src/app/api/admin/categories/route";
+import { POST as uploadAdminImage } from "../src/app/api/admin/upload/route";
 import { POST as createSession } from "../src/app/api/auth/session/route";
 
 describe("Route Handlers & Proxy Security", () => {
@@ -24,14 +27,38 @@ describe("Route Handlers & Proxy Security", () => {
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
   });
 
-  it("rejects unauthenticated requests to admin endpoints with 401", async () => {
+  it("rejects unauthenticated requests to admin read, add, and replace endpoints with 401", async () => {
     const ovReq = new Request("http://localhost:3000/api/admin/overview");
-    const ovRes = await getAdminOverview(ovReq);
-    expect(ovRes.status).toBe(401);
+    expect((await getAdminOverview(ovReq)).status).toBe(401);
 
     const bkReq = new Request("http://localhost:3000/api/admin/bookings");
-    const bkRes = await getAdminBookings(bkReq);
-    expect(bkRes.status).toBe(401);
+    expect((await getAdminBookings(bkReq)).status).toBe(401);
+
+    const addReq = new Request("http://localhost:3000/api/admin/gallery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Unauthorized Add" }),
+    });
+    expect((await postAdminGallery(addReq)).status).toBe(401);
+
+    const replaceReq = new Request("http://localhost:3000/api/admin/gallery", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "img-1", imageUrl: "https://evil.invalid/x.jpg" }),
+    });
+    expect((await patchAdminGallery(replaceReq)).status).toBe(401);
+
+    const replaceCatReq = new Request("http://localhost:3000/api/admin/categories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "cat-wedding", coverImage: "https://evil.invalid/x.jpg" }),
+    });
+    expect((await patchAdminCategories(replaceCatReq)).status).toBe(401);
+
+    const uploadReq = new Request("http://localhost:3000/api/admin/upload", {
+      method: "POST",
+    });
+    expect((await uploadAdminImage(uploadReq)).status).toBe(401);
   });
 
   it("rejects missing Firebase ID token on /api/auth/session", async () => {
@@ -70,12 +97,12 @@ describe("Route Handlers & Proxy Security", () => {
     expect(validRes.status).toBe(503);
   });
 
-  it("serves empty gallery cleanly from GET /api/gallery before uploads", async () => {
+  it("serves filtered gallery plates from GET /api/gallery", async () => {
     const req = new Request("http://localhost:3000/api/gallery?category=wedding");
     const res = await getPublicGallery(req);
     expect(res.status).toBe(200);
-    const json = (await res.json()) as { items: unknown[]; total: number };
-    expect(Array.isArray(json.items)).toBe(true);
-    expect(json.total).toBe(0);
+    const json = (await res.json()) as { items: Array<{ categorySlug: string }> };
+    expect(json.items.length).toBeGreaterThan(0);
+    expect(json.items.every((i) => i.categorySlug === "wedding")).toBe(true);
   });
 });

@@ -5,7 +5,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Calendar, MapPin } from "lucide-react";
 import { getGalleryImages, getStories, getStoryBySlug } from "@/lib/firestore";
+import { INITIAL_STORIES } from "@/lib/studio-catalog";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
+
+export function generateStaticParams() {
+  return INITIAL_STORIES.map((s) => ({ slug: s.slug }));
+}
 
 export async function generateMetadata(props: {
   params: Promise<{ slug: string }>;

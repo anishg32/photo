@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Image from "next/image";
 import type { SiteSettings, StudioService } from "@/types";
 import { ImageUploadField } from "./ImageUploadField";
+import { ReplacePictureButton } from "./ReplacePictureButton";
 
 export function SettingsManagerPanel({
   settings,
@@ -170,17 +172,47 @@ export function SettingsManagerPanel({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-          <div className="space-y-3">
+          <div className="rounded-xl border border-white/10 bg-[#0a0a0a] p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs uppercase tracking-[0.14em] text-[#CCCCCC]">
+                Homepage Hero Picture
+              </p>
+              <ReplacePictureButton
+                folder="gallery"
+                label="Replace Hero Picture"
+                onReplaced={async (res) => {
+                  setForm((prev) => ({ ...prev, heroImageUrl: res.imageUrl }));
+                  await fetch("/api/admin/settings", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ heroImageUrl: res.imageUrl }),
+                  });
+                  setFeedback("Hero cover picture replaced.");
+                  await onRefresh();
+                }}
+              />
+            </div>
+            {form.heroImageUrl && (
+              <div className="relative aspect-[16/9] w-full overflow-hidden rounded-lg border border-white/10">
+                <Image
+                  src={form.heroImageUrl}
+                  alt="Current Homepage Hero"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 400px"
+                  className="object-cover"
+                />
+              </div>
+            )}
             <ImageUploadField
               folder="gallery"
-              label="Homepage Hero Cover Photograph"
+              label="Or Upload New Hero File"
               onUploaded={(res) =>
                 setForm((prev) => ({ ...prev, heroImageUrl: res.imageUrl }))
               }
             />
             <input
               type="text"
-              placeholder="Hero image URL (optional)"
+              placeholder="Hero image URL"
               value={form.heroImageUrl || ""}
               onChange={(e) =>
                 setForm({ ...form, heroImageUrl: e.target.value })
@@ -189,17 +221,47 @@ export function SettingsManagerPanel({
             />
           </div>
 
-          <div className="space-y-3">
+          <div className="rounded-xl border border-white/10 bg-[#0a0a0a] p-4 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs uppercase tracking-[0.14em] text-[#CCCCCC]">
+                Studio Portrait (About Section)
+              </p>
+              <ReplacePictureButton
+                folder="gallery"
+                label="Replace Portrait"
+                onReplaced={async (res) => {
+                  setForm((prev) => ({ ...prev, aboutImageUrl: res.imageUrl }));
+                  await fetch("/api/admin/settings", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ aboutImageUrl: res.imageUrl }),
+                  });
+                  setFeedback("Studio portrait picture replaced.");
+                  await onRefresh();
+                }}
+              />
+            </div>
+            {form.aboutImageUrl && (
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-white/10">
+                <Image
+                  src={form.aboutImageUrl}
+                  alt="Current Studio Portrait"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 400px"
+                  className="object-cover"
+                />
+              </div>
+            )}
             <ImageUploadField
               folder="gallery"
-              label="Studio Portrait (About Section)"
+              label="Or Upload New Portrait File"
               onUploaded={(res) =>
                 setForm((prev) => ({ ...prev, aboutImageUrl: res.imageUrl }))
               }
             />
             <input
               type="text"
-              placeholder="About portrait URL (optional)"
+              placeholder="About portrait URL"
               value={form.aboutImageUrl || ""}
               onChange={(e) =>
                 setForm({ ...form, aboutImageUrl: e.target.value })

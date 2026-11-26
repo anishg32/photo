@@ -60,11 +60,14 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => null);
-  const parsed = categorySchema.safeParse(body);
-  if (!parsed.success || !parsed.data.id) {
+  const body = (await request.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
+  const id = typeof body?.id === "string" ? body.id.trim() : "";
+  if (!id) {
     return NextResponse.json(
-      { error: "Valid category ID and fields are required." },
+      { error: "Valid category ID is required." },
       { status: 400 }
     );
   }
@@ -77,8 +80,27 @@ export async function PATCH(request: Request) {
     );
   }
 
+  // Allow direct cover-image replacement or partial update when only coverImage is supplied
+  if (typeof body?.coverImage === "string" && !body.name) {
+    await db.collection("categories").doc(id).update({
+      coverImage: body.coverImage.trim(),
+    });
+    revalidatePath("/");
+    revalidatePath("/categories");
+    revalidatePath("/services");
+    return NextResponse.json({ ok: true });
+  }
+
+  const parsed = categorySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message || "Invalid category fields." },
+      { status: 400 }
+    );
+  }
+
   const data = parsed.data;
-  await db.collection("categories").doc(data.id!).update({
+  await db.collection("categories").doc(id).update({
     name: data.name,
     slug: data.slug,
     description: data.description,
@@ -89,6 +111,7 @@ export async function PATCH(request: Request) {
   revalidatePath("/");
   revalidatePath("/categories");
   revalidatePath(`/categories/${data.slug}`);
+  revalidatePath("/services");
 
   return NextResponse.json({ ok: true });
 }
