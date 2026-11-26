@@ -1,0 +1,108 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Admin verification: relies on Firebase Auth custom claim `admin == true`
+    // (assigned strictly server-side via Admin SDK / Cloud Functions),
+    // with fallback verification against an existing server-created admin user document.
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        )
+      );
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Users collection:
+    // - Users can read their own profile.
+    // - Public users can NEVER create/update their own role to 'admin'.
+    // - Only verified admins (or server Admin SDK) may manage roles and user records.
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isAdmin() || (
+        isOwner(uid) &&
+        request.resource.data.uid == uid &&
+        request.resource.data.role == 'customer' &&
+        request.resource.data.keys().hasOnly(['uid', 'fullName', 'email', 'role', 'createdAt'])
+      );
+      allow update: if isAdmin() || (
+        isOwner(uid) &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.uid == resource.data.uid
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Gallery Images:
+    // - Public read ONLY for published frames.
+    // - Admin full read/write.
+    match /gallery_images/{imageId} {
+      allow read: if resource.data.published == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Categories:
+    // - Public read.
+    // - Admin write.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Bookings:
+    // - NEVER permit direct anonymous client writes or reads.
+    // - Public booking enquiries MUST go through the validated server-side API route
+    //   (/api/bookings) or Cloud Function (submitBooking).
+    // - Admins can read, update statuses, and manage enquiries.
+    match /bookings/{bookingId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Testimonials:
+    // - Public read ONLY when approved == true.
+    // - Submissions go through validated /api/testimonials (which forces approved: false).
+    // - Admins can read all, approve, reject, and delete.
+    match /testimonials/{testimonialId} {
+      allow read: if resource.data.approved == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Stories:
+    // - Public read ONLY when published == true.
+    // - Admin full read/write.
+    match /stories/{storyId} {
+      allow read: if resource.data.published == true || isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Website Settings:
+    // - Public read for studio brand/contact/service descriptions.
+    // - Admin write only.
+    match /site_settings/{settingId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Internal Admin Notifications & Rate Limits:
+    // - Locked to Admin SDK / Cloud Functions + Admin read.
+    match /admin_notifications/{notifId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if false;
+    }
+
+    match /rate_limits/{key} {
+      allow read, write: if false;
+    }
+  }
+}
+
