@@ -7,12 +7,12 @@ import { Menu, X, Aperture, ArrowUpRight } from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
-  { href: "/gallery", label: "Gallery" },
+  { href: "/about", label: "About" },
   { href: "/categories", label: "Categories" },
+  { href: "/gallery", label: "Gallery" },
   { href: "/exhibition", label: "3D Museum" },
   { href: "/stories", label: "Stories" },
   { href: "/services", label: "Services" },
-  { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -115,15 +115,15 @@ export function SiteHeader({ brandName = "MJ PHOTOGRAPHY" }: { brandName?: strin
         }`}
       >
         <div
-          className={`mx-auto max-w-7xl flex items-center justify-between gap-4 rounded-full transition-all duration-500 ${
+          className={`mx-auto max-w-[88rem] flex items-center justify-between gap-6 xl:gap-8 rounded-full transition-all duration-500 ${
             scrolled
-              ? "liquid-glass px-5 py-2.5 shadow-2xl"
-              : "bg-black/30 backdrop-blur-md border border-white/10 px-6 py-3"
+              ? "liquid-glass px-5 sm:px-7 py-2.5 shadow-2xl"
+              : "bg-black/35 backdrop-blur-md border border-white/10 px-5 sm:px-7 py-2.5"
           }`}
         >
           <Link
             href="/"
-            className="group flex items-center gap-2.5 text-white shrink-0 min-h-[44px]"
+            className="group flex items-center gap-2.5 text-white shrink-0 min-h-[44px] pr-2"
           >
             <Aperture
               aria-hidden="true"
@@ -134,8 +134,11 @@ export function SiteHeader({ brandName = "MJ PHOTOGRAPHY" }: { brandName?: strin
             </span>
           </Link>
 
-          <nav aria-label="Primary" className="hidden xl:flex items-center gap-1">
-            <ul className="flex items-center gap-1 list-none m-0 p-0">
+          <nav
+            aria-label="Primary"
+            className="hidden xl:flex flex-1 items-center justify-center"
+          >
+            <ul className="flex items-center justify-center gap-1.5 list-none m-0 p-0">
               {NAV_LINKS.map((item) => {
                 const active = isActive(item.href);
                 return (
@@ -143,9 +146,9 @@ export function SiteHeader({ brandName = "MJ PHOTOGRAPHY" }: { brandName?: strin
                     <Link
                       href={item.href}
                       aria-current={active ? "page" : undefined}
-                      className={`relative px-3.5 py-2 text-xs tracking-[0.16em] uppercase transition-colors whitespace-nowrap rounded-full inline-flex items-center min-h-[40px] ${
+                      className={`relative px-3 py-2 text-[11px] tracking-[0.16em] uppercase transition-colors whitespace-nowrap rounded-full inline-flex items-center min-h-[40px] ${
                         active
-                          ? "text-[#080808] bg-[#C6A46A] font-medium"
+                          ? "text-[#C6A46A] bg-white/[0.06] font-medium after:content-[''] after:absolute after:inset-x-3 after:bottom-1.5 after:h-[2px] after:rounded-full after:bg-[#C6A46A]"
                           : "text-white/80 hover:text-white hover:bg-white/5"
                       }`}
                     >
@@ -157,10 +160,10 @@ export function SiteHeader({ brandName = "MJ PHOTOGRAPHY" }: { brandName?: strin
             </ul>
           </nav>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-3 shrink-0 pl-2">
             <Link
               href="/contact"
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[#C6A46A]/60 bg-[#C6A46A]/10 px-4 py-2 text-xs tracking-[0.16em] uppercase text-[#C6A46A] hover:bg-[#C6A46A] hover:text-[#080808] transition-colors min-h-[40px] whitespace-nowrap"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[#C6A46A] px-5 py-2 text-[11px] font-semibold tracking-[0.16em] uppercase text-[#080808] hover:bg-[#d8b87d] transition-colors min-h-[40px] whitespace-nowrap"
             >
               <span>Book Session</span>
               <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />

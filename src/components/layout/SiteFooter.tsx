@@ -63,13 +63,13 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
                 </Link>
               </li>
               <li>
-                <Link href="/gallery" className="hover:text-white transition-colors">
-                  Photography Gallery
+                <Link href="/categories" className="hover:text-white transition-colors">
+                  Categories
                 </Link>
               </li>
               <li>
-                <Link href="/categories" className="hover:text-white transition-colors">
-                  Categories
+                <Link href="/gallery" className="hover:text-white transition-colors">
+                  Photography Gallery
                 </Link>
               </li>
               <li>
