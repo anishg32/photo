@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import { Edit3, Eye, EyeOff, Trash2 } from "lucide-react";
 import type { Story } from "@/types";
+import { adminJsonRequest } from "@/lib/admin-client";
 import { slugify } from "@/lib/validation";
 import { ImageUploadField } from "./ImageUploadField";
 import { ReplacePictureButton } from "./ReplacePictureButton";
@@ -74,29 +75,48 @@ export function StoriesManagerPanel({
   };
 
   const togglePublish = async (story: Story) => {
-    await fetch("/api/admin/stories", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: story.id, published: !story.published }),
-    });
-    await onRefresh();
+    try {
+      await adminJsonRequest("/api/admin/stories", "PATCH", {
+        id: story.id,
+        published: !story.published,
+      });
+      await onRefresh();
+    } catch (err) {
+      setFeedback(
+        err instanceof Error ? err.message : "Unable to update story."
+      );
+    }
   };
 
   const deleteStory = async (id: string) => {
-    await fetch(`/api/admin/stories?id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    await onRefresh();
+    try {
+      await adminJsonRequest(
+        `/api/admin/stories?id=${encodeURIComponent(id)}`,
+        "DELETE"
+      );
+      await onRefresh();
+    } catch (err) {
+      setFeedback(
+        err instanceof Error ? err.message : "Unable to delete story."
+      );
+    }
   };
 
   const replaceStoryCover = async (id: string, imageUrl: string) => {
-    await fetch("/api/admin/stories", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, coverImage: imageUrl }),
-    });
-    setFeedback("Updated story cover picture.");
-    await onRefresh();
+    try {
+      await adminJsonRequest("/api/admin/stories", "PATCH", {
+        id,
+        coverImage: imageUrl,
+        replacePreviousImage: true,
+      });
+      setFeedback("Updated story cover picture.");
+      await onRefresh();
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to replace story cover.";
+      setFeedback(msg);
+      throw new Error(msg);
+    }
   };
 
   return (

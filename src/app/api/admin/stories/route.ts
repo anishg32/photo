@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb, verifyAdminRequest } from "@/lib/firebase-admin";
 import { getStories } from "@/lib/firestore";
 import { storySchema } from "@/lib/validation";
+import { deleteStorageObjectsByUrls } from "@/lib/storage-server";
 
 export async function GET(request: Request) {
   const admin = await verifyAdminRequest(request);
@@ -90,7 +91,7 @@ export async function PATCH(request: Request) {
   if (typeof body?.slug === "string") updates.slug = body.slug.trim();
   if (typeof body?.description === "string")
     updates.description = body.description.trim();
-  if (typeof body?.coverImage === "string")
+  if (typeof body?.coverImage === "string" && body.coverImage.trim())
     updates.coverImage = body.coverImage.trim();
   if (typeof body?.content === "string") updates.content = body.content.trim();
   if (typeof body?.location === "string")
@@ -102,10 +103,43 @@ export async function PATCH(request: Request) {
   if (typeof body?.published === "boolean")
     updates.published = body.published;
 
-  await db.collection("stories").doc(id).update(updates);
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json(
+      { error: "No valid story fields provided." },
+      { status: 400 }
+    );
+  }
+
+  const docRef = db.collection("stories").doc(id);
+  const existingSnap = await docRef.get();
+  if (!existingSnap.exists) {
+    return NextResponse.json(
+      { error: "Story record not found in Firestore." },
+      { status: 404 }
+    );
+  }
+  const prevData = existingSnap.data();
+
+  await docRef.update(updates);
+
+  if (
+    body?.replacePreviousImage === true &&
+    typeof updates.coverImage === "string" &&
+    typeof prevData?.coverImage === "string" &&
+    prevData.coverImage &&
+    prevData.coverImage !== updates.coverImage
+  ) {
+    await deleteStorageObjectsByUrls([prevData.coverImage]);
+  }
 
   revalidatePath("/");
   revalidatePath("/stories");
+  if (typeof prevData?.slug === "string" && prevData.slug) {
+    revalidatePath(`/stories/${prevData.slug}`);
+  }
+  if (typeof updates.slug === "string" && updates.slug) {
+    revalidatePath(`/stories/${updates.slug}`);
+  }
 
   return NextResponse.json({ ok: true });
 }
@@ -130,7 +164,24 @@ export async function DELETE(request: Request) {
     );
   }
 
-  await db.collection("stories").doc(id).delete();
+  const docRef = db.collection("stories").doc(id);
+  const snap = await docRef.get();
+  if (snap.exists) {
+    const d = snap.data()!;
+    const urlsToDelete: string[] = [];
+    if (typeof d.coverImage === "string" && d.coverImage) {
+      urlsToDelete.push(d.coverImage);
+    }
+    if (Array.isArray(d.galleryImages)) {
+      for (const item of d.galleryImages) {
+        if (item && typeof item.url === "string" && item.url) {
+          urlsToDelete.push(item.url);
+        }
+      }
+    }
+    await deleteStorageObjectsByUrls(urlsToDelete);
+    await docRef.delete();
+  }
   revalidatePath("/");
   revalidatePath("/stories");
 

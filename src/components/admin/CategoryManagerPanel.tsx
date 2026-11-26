@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Image from "next/image";
 import { Edit3, Trash2 } from "lucide-react";
 import type { Category } from "@/types";
+import { adminJsonRequest } from "@/lib/admin-client";
 import { slugify } from "@/lib/validation";
 import { ImageUploadField } from "./ImageUploadField";
 import { ReplacePictureButton } from "./ReplacePictureButton";
@@ -64,20 +65,34 @@ export function CategoryManagerPanel({
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    await onRefresh();
+    try {
+      await adminJsonRequest(
+        `/api/admin/categories?id=${encodeURIComponent(id)}`,
+        "DELETE"
+      );
+      await onRefresh();
+    } catch (err) {
+      setFeedback(
+        err instanceof Error ? err.message : "Failed to delete category."
+      );
+    }
   };
 
   const replaceCategoryCover = async (id: string, imageUrl: string) => {
-    await fetch("/api/admin/categories", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, coverImage: imageUrl }),
-    });
-    setFeedback("Updated category cover picture.");
-    await onRefresh();
+    try {
+      await adminJsonRequest("/api/admin/categories", "PATCH", {
+        id,
+        coverImage: imageUrl,
+        replacePreviousImage: true,
+      });
+      setFeedback("Updated category cover picture.");
+      await onRefresh();
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to update category cover.";
+      setFeedback(msg);
+      throw new Error(msg);
+    }
   };
 
   return (

@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb, verifyAdminRequest } from "@/lib/firebase-admin";
 import { getSiteSettings } from "@/lib/firestore";
 import { siteSettingsSchema } from "@/lib/validation";
+import { deleteStorageObjectsByUrls } from "@/lib/storage-server";
 
 export async function GET(request: Request) {
   const admin = await verifyAdminRequest(request);
@@ -78,9 +79,7 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const updates: Record<string, unknown> = {
-    updatedAt: FieldValue.serverTimestamp(),
-  };
+  const updates: Record<string, unknown> = {};
   if (typeof body.heroImageUrl === "string") {
     updates.heroImageUrl = body.heroImageUrl.trim();
   }
@@ -88,10 +87,47 @@ export async function PATCH(request: Request) {
     updates.aboutImageUrl = body.aboutImageUrl.trim();
   }
 
-  await db
-    .collection("site_settings")
-    .doc("main")
-    .set(updates, { merge: true });
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json(
+      { error: "No image URL fields provided." },
+      { status: 400 }
+    );
+  }
+
+  const settingsRef = db.collection("site_settings").doc("main");
+  const prevSnap = await settingsRef.get();
+  const prevData = prevSnap.exists ? prevSnap.data() : null;
+
+  await settingsRef.set(
+    {
+      ...updates,
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  if (body.replacePreviousImage === true && prevData) {
+    const obsoleteUrls: string[] = [];
+    if (
+      typeof updates.heroImageUrl === "string" &&
+      typeof prevData.heroImageUrl === "string" &&
+      prevData.heroImageUrl &&
+      prevData.heroImageUrl !== updates.heroImageUrl
+    ) {
+      obsoleteUrls.push(prevData.heroImageUrl);
+    }
+    if (
+      typeof updates.aboutImageUrl === "string" &&
+      typeof prevData.aboutImageUrl === "string" &&
+      prevData.aboutImageUrl &&
+      prevData.aboutImageUrl !== updates.aboutImageUrl
+    ) {
+      obsoleteUrls.push(prevData.aboutImageUrl);
+    }
+    if (obsoleteUrls.length > 0) {
+      await deleteStorageObjectsByUrls(obsoleteUrls);
+    }
+  }
 
   revalidatePath("/");
   revalidatePath("/about");

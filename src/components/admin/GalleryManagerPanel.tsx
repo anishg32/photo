@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import {
   Trash2,
@@ -15,6 +15,7 @@ import {
   Database,
 } from "lucide-react";
 import type { Category, GalleryImage } from "@/types";
+import { adminJsonRequest } from "@/lib/admin-client";
 import { ImageUploadField } from "./ImageUploadField";
 import { ReplacePictureButton } from "./ReplacePictureButton";
 
@@ -59,6 +60,12 @@ export function GalleryManagerPanel({
   const [batchPublished, setBatchPublished] = useState(true);
   const [batchStatus, setBatchStatus] = useState<string | null>(null);
   const [batchBusy, setBatchBusy] = useState(false);
+
+  useEffect(() => {
+    if (!categoryId && categories[0]?.id) setCategoryId(categories[0].id);
+    if (!batchCategoryId && categories[0]?.id)
+      setBatchCategoryId(categories[0].id);
+  }, [categories, categoryId, batchCategoryId]);
 
   const resetForm = () => {
     setEditingId(null);
@@ -151,43 +158,39 @@ export function GalleryManagerPanel({
     let added = 0;
     const cat = categories.find((c) => c.id === batchCategoryId);
 
-    for (let i = 0; i < total; i++) {
-      const file = files[i];
-      setBatchStatus(`Uploading picture ${i + 1} of ${total}: ${file.name}...`);
+    try {
+      for (let i = 0; i < total; i++) {
+        const file = files[i];
+        setBatchStatus(`Uploading picture ${i + 1} of ${total}: ${file.name}...`);
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "gallery");
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("folder", "gallery");
 
-      const upRes = await fetch("/api/admin/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const upJson = (await upRes.json().catch(() => ({}))) as {
-        error?: string;
-        imageUrl?: string;
-        thumbnailUrl?: string;
-        width?: number;
-        height?: number;
-      };
+        const upRes = await fetch("/api/admin/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const upJson = (await upRes.json().catch(() => ({}))) as {
+          error?: string;
+          imageUrl?: string;
+          thumbnailUrl?: string;
+          width?: number;
+          height?: number;
+        };
 
-      if (!upRes.ok || !upJson.imageUrl) {
-        setBatchStatus(
-          `Stopped on ${file.name}: ${upJson.error || "Upload failed."}`
-        );
-        setBatchBusy(false);
-        return;
-      }
+        if (!upRes.ok || !upJson.imageUrl) {
+          throw new Error(
+            `Stopped on ${file.name}: ${upJson.error || "Upload failed."}`
+          );
+        }
 
-      const niceTitle = file.name
-        .replace(/\.[^.]+$/, "")
-        .replace(/[-_]+/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase());
+        const niceTitle = file.name
+          .replace(/\.[^.]+$/, "")
+          .replace(/[-_]+/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase());
 
-      await fetch("/api/admin/gallery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        await adminJsonRequest("/api/admin/gallery", "POST", {
           title: niceTitle || `Frame ${items.length + i + 1}`,
           description: `${cat?.name || "Studio"} archival frame uploaded to MJ PHOTOGRAPHY.`,
           imageUrl: upJson.imageUrl,
@@ -202,16 +205,22 @@ export function GalleryManagerPanel({
           displayOrder: items.length + i + 1,
           width: upJson.width ?? 1600,
           height: upJson.height ?? 1200,
-        }),
-      });
-      added++;
-    }
+        });
+        added++;
+      }
 
-    setBatchBusy(false);
-    setBatchStatus(
-      `Successfully added ${added} of ${total} pictures to Firestore & Storage.`
-    );
-    await onRefresh();
+      setBatchStatus(
+        `Successfully added ${added} of ${total} pictures to Firestore & Storage.`
+      );
+      await onRefresh();
+    } catch (err) {
+      setBatchStatus(
+        err instanceof Error ? err.message : "Batch upload failed."
+      );
+      if (added > 0) await onRefresh();
+    } finally {
+      setBatchBusy(false);
+    }
   };
 
   const replaceImage = async (
@@ -223,39 +232,51 @@ export function GalleryManagerPanel({
       height: number;
     }
   ) => {
-    await fetch("/api/admin/gallery", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      await adminJsonRequest("/api/admin/gallery", "PATCH", {
         id: img.id,
         imageUrl: replacement.imageUrl,
         thumbnailUrl: replacement.thumbnailUrl,
         width: replacement.width,
         height: replacement.height,
         replacePreviousImage: true,
-      }),
-    });
-    setFeedback(`Replaced picture for "${img.title}".`);
-    await onRefresh();
+      });
+      setFeedback(`Replaced picture for "${img.title}".`);
+      await onRefresh();
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to replace picture.";
+      setFeedback(msg);
+      throw new Error(msg);
+    }
   };
 
   const toggleField = async (
     img: GalleryImage,
     patch: Partial<Pick<GalleryImage, "featured" | "published" | "displayOrder">>
   ) => {
-    await fetch("/api/admin/gallery", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: img.id, ...patch }),
-    });
-    await onRefresh();
+    try {
+      await adminJsonRequest("/api/admin/gallery", "PATCH", { id: img.id, ...patch });
+      await onRefresh();
+    } catch (err) {
+      setFeedback(
+        err instanceof Error ? err.message : "Unable to update photograph."
+      );
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/admin/gallery?id=${encodeURIComponent(id)}`, {
-      method: "DELETE",
-    });
-    await onRefresh();
+    try {
+      await adminJsonRequest(
+        `/api/admin/gallery?id=${encodeURIComponent(id)}`,
+        "DELETE"
+      );
+      await onRefresh();
+    } catch (err) {
+      setFeedback(
+        err instanceof Error ? err.message : "Unable to delete photograph."
+      );
+    }
   };
 
   const handleLoadSamples = async () => {

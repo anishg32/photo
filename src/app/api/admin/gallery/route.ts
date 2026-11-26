@@ -68,6 +68,11 @@ export async function POST(request: Request) {
   revalidatePath("/");
   revalidatePath("/gallery");
   revalidatePath("/categories");
+  revalidatePath("/exhibition");
+  const resolvedSlug = data.categorySlug || catData?.slug;
+  if (typeof resolvedSlug === "string" && resolvedSlug) {
+    revalidatePath(`/categories/${resolvedSlug}`);
+  }
 
   return NextResponse.json({ ok: true, id: ref.id }, { status: 201 });
 }
@@ -131,9 +136,22 @@ export async function PATCH(request: Request) {
     }
   }
 
+  if (Object.keys(allowedUpdates).length === 0) {
+    return NextResponse.json(
+      { error: "No valid fields provided for update." },
+      { status: 400 }
+    );
+  }
+
   const docRef = db.collection("gallery_images").doc(id);
   const existingSnap = await docRef.get();
-  const prevData = existingSnap.exists ? existingSnap.data() : null;
+  if (!existingSnap.exists) {
+    return NextResponse.json(
+      { error: "Photograph record not found in Firestore." },
+      { status: 404 }
+    );
+  }
+  const prevData = existingSnap.data();
 
   await docRef.update(allowedUpdates);
 
@@ -153,6 +171,13 @@ export async function PATCH(request: Request) {
   revalidatePath("/gallery");
   revalidatePath("/categories");
   revalidatePath("/exhibition");
+  const slugToRevalidate =
+    (typeof allowedUpdates.categorySlug === "string" &&
+      allowedUpdates.categorySlug) ||
+    (typeof prevData?.categorySlug === "string" && prevData.categorySlug);
+  if (slugToRevalidate) {
+    revalidatePath(`/categories/${slugToRevalidate}`);
+  }
 
   return NextResponse.json({ ok: true });
 }
@@ -179,6 +204,7 @@ export async function DELETE(request: Request) {
 
   const docRef = db.collection("gallery_images").doc(id);
   const snap = await docRef.get();
+  const deletedCategorySlug = snap.exists ? snap.data()?.categorySlug : null;
   if (snap.exists) {
     const d = snap.data()!;
     await deleteStorageObjectsByUrls([
@@ -191,6 +217,10 @@ export async function DELETE(request: Request) {
   revalidatePath("/");
   revalidatePath("/gallery");
   revalidatePath("/categories");
+  revalidatePath("/exhibition");
+  if (typeof deletedCategorySlug === "string" && deletedCategorySlug) {
+    revalidatePath(`/categories/${deletedCategorySlug}`);
+  }
 
   return NextResponse.json({ ok: true });
 }

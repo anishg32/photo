@@ -8,6 +8,9 @@ import { GET as getAdminOverview } from "../src/app/api/admin/overview/route";
 import { GET as getAdminBookings } from "../src/app/api/admin/bookings/route";
 import { PATCH as patchAdminGallery, POST as postAdminGallery } from "../src/app/api/admin/gallery/route";
 import { PATCH as patchAdminCategories } from "../src/app/api/admin/categories/route";
+import { PATCH as patchAdminStories, POST as postAdminStories } from "../src/app/api/admin/stories/route";
+import { PATCH as patchAdminSettings, PUT as putAdminSettings } from "../src/app/api/admin/settings/route";
+import { POST as seedAdminCatalog } from "../src/app/api/admin/seed/route";
 import { POST as uploadAdminImage } from "../src/app/api/admin/upload/route";
 import { POST as createSession } from "../src/app/api/auth/session/route";
 
@@ -59,6 +62,39 @@ describe("Route Handlers & Proxy Security", () => {
       method: "POST",
     });
     expect((await uploadAdminImage(uploadReq)).status).toBe(401);
+
+    const addStoryReq = new Request("http://localhost:3000/api/admin/stories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "Unauthorized Story" }),
+    });
+    expect((await postAdminStories(addStoryReq)).status).toBe(401);
+
+    const replaceStoryReq = new Request("http://localhost:3000/api/admin/stories", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: "story-1", coverImage: "https://evil.invalid/x.jpg" }),
+    });
+    expect((await patchAdminStories(replaceStoryReq)).status).toBe(401);
+
+    const replaceSettingsReq = new Request("http://localhost:3000/api/admin/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ heroImageUrl: "https://evil.invalid/hero.jpg" }),
+    });
+    expect((await patchAdminSettings(replaceSettingsReq)).status).toBe(401);
+
+    const putSettingsReq = new Request("http://localhost:3000/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect((await putAdminSettings(putSettingsReq)).status).toBe(401);
+
+    const seedReq = new Request("http://localhost:3000/api/admin/seed", {
+      method: "POST",
+    });
+    expect((await seedAdminCatalog(seedReq)).status).toBe(401);
   });
 
   it("rejects missing Firebase ID token on /api/auth/session", async () => {

@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb, verifyAdminRequest } from "@/lib/firebase-admin";
 import { getCategories } from "@/lib/firestore";
 import { categorySchema } from "@/lib/validation";
+import { deleteStorageObjectsByUrls } from "@/lib/storage-server";
 
 export async function GET(request: Request) {
   const admin = await verifyAdminRequest(request);
@@ -80,13 +81,42 @@ export async function PATCH(request: Request) {
     );
   }
 
-  // Allow direct cover-image replacement or partial update when only coverImage is supplied
+  const docRef = db.collection("categories").doc(id);
+  const existingSnap = await docRef.get();
+  if (!existingSnap.exists) {
+    return NextResponse.json(
+      { error: "Category record not found in Firestore." },
+      { status: 404 }
+    );
+  }
+  const prevData = existingSnap.data();
+
+  // Allow direct cover-image replacement when only coverImage is supplied
   if (typeof body?.coverImage === "string" && !body.name) {
-    await db.collection("categories").doc(id).update({
-      coverImage: body.coverImage.trim(),
-    });
+    const nextCover = body.coverImage.trim();
+    if (!nextCover) {
+      return NextResponse.json(
+        { error: "Replacement cover image URL cannot be empty." },
+        { status: 400 }
+      );
+    }
+
+    await docRef.update({ coverImage: nextCover });
+
+    if (
+      body.replacePreviousImage === true &&
+      typeof prevData?.coverImage === "string" &&
+      prevData.coverImage &&
+      prevData.coverImage !== nextCover
+    ) {
+      await deleteStorageObjectsByUrls([prevData.coverImage]);
+    }
+
     revalidatePath("/");
     revalidatePath("/categories");
+    if (typeof prevData?.slug === "string" && prevData.slug) {
+      revalidatePath(`/categories/${prevData.slug}`);
+    }
     revalidatePath("/services");
     return NextResponse.json({ ok: true });
   }
@@ -100,13 +130,22 @@ export async function PATCH(request: Request) {
   }
 
   const data = parsed.data;
-  await db.collection("categories").doc(id).update({
+  await docRef.update({
     name: data.name,
     slug: data.slug,
     description: data.description,
     coverImage: data.coverImage,
     displayOrder: data.displayOrder,
   });
+
+  if (
+    body?.replacePreviousImage === true &&
+    typeof prevData?.coverImage === "string" &&
+    prevData.coverImage &&
+    prevData.coverImage !== data.coverImage
+  ) {
+    await deleteStorageObjectsByUrls([prevData.coverImage]);
+  }
 
   revalidatePath("/");
   revalidatePath("/categories");
@@ -136,7 +175,15 @@ export async function DELETE(request: Request) {
     );
   }
 
-  await db.collection("categories").doc(id).delete();
+  const docRef = db.collection("categories").doc(id);
+  const snap = await docRef.get();
+  if (snap.exists) {
+    const cover = snap.data()?.coverImage;
+    if (typeof cover === "string" && cover) {
+      await deleteStorageObjectsByUrls([cover]);
+    }
+    await docRef.delete();
+  }
 
   revalidatePath("/");
   revalidatePath("/categories");

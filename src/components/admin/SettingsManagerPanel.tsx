@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import type { SiteSettings, StudioService } from "@/types";
+import { adminJsonRequest } from "@/lib/admin-client";
 import { ImageUploadField } from "./ImageUploadField";
 import { ReplacePictureButton } from "./ReplacePictureButton";
 
@@ -16,6 +17,10 @@ export function SettingsManagerPanel({
   const [form, setForm] = useState<SiteSettings>(settings);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    setForm(settings);
+  }, [settings]);
 
   const updateService = (
     idx: number,
@@ -181,14 +186,22 @@ export function SettingsManagerPanel({
                 folder="gallery"
                 label="Replace Hero Picture"
                 onReplaced={async (res) => {
-                  setForm((prev) => ({ ...prev, heroImageUrl: res.imageUrl }));
-                  await fetch("/api/admin/settings", {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ heroImageUrl: res.imageUrl }),
-                  });
-                  setFeedback("Hero cover picture replaced.");
-                  await onRefresh();
+                  try {
+                    await adminJsonRequest("/api/admin/settings", "PATCH", {
+                      heroImageUrl: res.imageUrl,
+                      replacePreviousImage: true,
+                    });
+                    setForm((prev) => ({ ...prev, heroImageUrl: res.imageUrl }));
+                    setFeedback("Hero cover picture replaced.");
+                    await onRefresh();
+                  } catch (err) {
+                    const msg =
+                      err instanceof Error
+                        ? err.message
+                        : "Failed to replace hero picture.";
+                    setFeedback(msg);
+                    throw new Error(msg);
+                  }
                 }}
               />
             </div>
@@ -230,14 +243,25 @@ export function SettingsManagerPanel({
                 folder="gallery"
                 label="Replace Portrait"
                 onReplaced={async (res) => {
-                  setForm((prev) => ({ ...prev, aboutImageUrl: res.imageUrl }));
-                  await fetch("/api/admin/settings", {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ aboutImageUrl: res.imageUrl }),
-                  });
-                  setFeedback("Studio portrait picture replaced.");
-                  await onRefresh();
+                  try {
+                    await adminJsonRequest("/api/admin/settings", "PATCH", {
+                      aboutImageUrl: res.imageUrl,
+                      replacePreviousImage: true,
+                    });
+                    setForm((prev) => ({
+                      ...prev,
+                      aboutImageUrl: res.imageUrl,
+                    }));
+                    setFeedback("Studio portrait picture replaced.");
+                    await onRefresh();
+                  } catch (err) {
+                    const msg =
+                      err instanceof Error
+                        ? err.message
+                        : "Failed to replace studio portrait.";
+                    setFeedback(msg);
+                    throw new Error(msg);
+                  }
                 }}
               />
             </div>

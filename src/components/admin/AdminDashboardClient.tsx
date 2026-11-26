@@ -15,6 +15,8 @@ import {
   LogOut,
   ExternalLink,
   Database,
+  ImagePlus,
+  RefreshCw,
 } from "lucide-react";
 import type {
   Booking,
@@ -26,6 +28,8 @@ import type {
   Testimonial,
 } from "@/types";
 import { signOutAdmin } from "@/lib/firebase-auth";
+import { AddPicturesPanel } from "./AddPicturesPanel";
+import { ReplacePicturesPanel } from "./ReplacePicturesPanel";
 import { GalleryManagerPanel } from "./GalleryManagerPanel";
 import { CategoryManagerPanel } from "./CategoryManagerPanel";
 import { BookingsManagerPanel } from "./BookingsManagerPanel";
@@ -35,6 +39,8 @@ import { SettingsManagerPanel } from "./SettingsManagerPanel";
 
 type AdminTab =
   | "overview"
+  | "add-pictures"
+  | "replace-pictures"
   | "gallery"
   | "categories"
   | "bookings"
@@ -125,6 +131,8 @@ export function AdminDashboardClient({
     badge?: number;
   }> = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
+    { id: "add-pictures", label: "Add Pictures", icon: ImagePlus },
+    { id: "replace-pictures", label: "Replace Pictures", icon: RefreshCw },
     { id: "gallery", label: "Gallery", icon: Camera, badge: overview.totalPhotographs },
     {
       id: "categories",
@@ -254,6 +262,55 @@ export function AdminDashboardClient({
               </p>
             )}
 
+            {/* Admin-Only Quick Picture Operations */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <button
+                type="button"
+                onClick={() => setActiveTab("add-pictures")}
+                className="text-left rounded-2xl border border-[#C6A46A]/40 bg-[#111111] p-6 hover:border-[#C6A46A] transition-colors space-y-2.5 group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#C6A46A]">
+                    Admin Option 01
+                  </span>
+                  <ImagePlus
+                    aria-hidden="true"
+                    className="h-5 w-5 text-[#C6A46A] transition-transform group-hover:scale-110"
+                  />
+                </div>
+                <h2 className="font-editorial text-2xl text-white">
+                  Add New Pictures
+                </h2>
+                <p className="text-xs text-[#A0A0A0] leading-relaxed">
+                  Upload a single high-resolution photograph, batch-upload
+                  multiple frames, or add plates to a visual story.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("replace-pictures")}
+                className="text-left rounded-2xl border border-[#C6A46A]/40 bg-[#111111] p-6 hover:border-[#C6A46A] transition-colors space-y-2.5 group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#C6A46A]">
+                    Admin Option 02
+                  </span>
+                  <RefreshCw
+                    aria-hidden="true"
+                    className="h-5 w-5 text-[#C6A46A] transition-transform group-hover:rotate-45"
+                  />
+                </div>
+                <h2 className="font-editorial text-2xl text-white">
+                  Replace Website Pictures
+                </h2>
+                <p className="text-xs text-[#A0A0A0] leading-relaxed">
+                  Replace any sample or live image across Homepage Hero, About
+                  Portrait, Category covers, Gallery frames, and Stories.
+                </p>
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               <div className="rounded-2xl border border-white/10 bg-[#111111] p-6 space-y-2">
                 <p className="font-mono text-xs uppercase tracking-[0.18em] text-[#A0A0A0]">
@@ -314,6 +371,29 @@ export function AdminDashboardClient({
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === "add-pictures" && (
+          <AddPicturesPanel
+            categories={categories}
+            stories={stories}
+            galleryCount={gallery.length}
+            onRefresh={refreshAll}
+            onSeedCatalog={handleSeedCatalog}
+            seeding={seeding}
+          />
+        )}
+
+        {activeTab === "replace-pictures" && (
+          <ReplacePicturesPanel
+            settings={settings}
+            categories={categories}
+            gallery={gallery}
+            stories={stories}
+            onRefresh={refreshAll}
+            onSeedCatalog={handleSeedCatalog}
+            seeding={seeding}
+          />
         )}
 
         {activeTab === "gallery" && (

@@ -24,10 +24,12 @@ export function ReplacePictureButton({
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [doneLabel, setDoneLabel] = useState(false);
 
   const handleFile = (file: File | undefined) => {
     if (!file) return;
     setError(null);
+    setDoneLabel(false);
     setBusy(true);
     setProgress(0);
 
@@ -61,11 +63,15 @@ export function ReplacePictureButton({
             width: res.width ?? 1600,
             height: res.height ?? 1200,
           });
+          setDoneLabel(true);
+          window.setTimeout(() => setDoneLabel(false), 2600);
         } else {
           setError(res.error || "Failed to replace picture.");
         }
-      } catch {
-        setError("Invalid upload response.");
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to save replaced picture."
+        );
       } finally {
         setBusy(false);
       }
@@ -96,7 +102,9 @@ export function ReplacePictureButton({
             ? `Replacing ${progress}%`
             : busy
               ? "Updating..."
-              : label}
+              : doneLabel
+                ? "Updated"
+                : label}
         </span>
         <input
           type="file"
@@ -114,3 +122,4 @@ export function ReplacePictureButton({
     </div>
   );
 }
+
