@@ -21,3 +21,4 @@ export async function adminJsonRequest<T = { ok?: boolean }>(
   }
   return data;
 }
+
