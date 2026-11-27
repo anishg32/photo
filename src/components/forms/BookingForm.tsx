@@ -16,6 +16,7 @@ export function BookingForm({
 }: BookingFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
   const statusRegionId = useId();
+  const [hydrated, setHydrated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [serverFeedback, setServerFeedback] = useState<{
     type: "success" | "error";
@@ -32,6 +33,10 @@ export function BookingForm({
   const [location, setLocation] = useState("");
   const [message, setMessage] = useState("");
   const [honeypot, setHoneypot] = useState("");
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     if (defaultService) {
@@ -109,6 +114,7 @@ export function BookingForm({
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!hydrated) return;
     const form = formRef.current;
     if (!form) return;
 
@@ -188,7 +194,6 @@ export function BookingForm({
     <form
       ref={formRef}
       onSubmit={handleSubmit}
-      method="POST"
       noValidate={false}
       aria-labelledby="booking-form-heading"
       className="space-y-6"
@@ -427,8 +432,8 @@ export function BookingForm({
       </div>
 
       <button
-        type="submit"
-        disabled={submitting}
+        type={hydrated ? "submit" : "button"}
+        disabled={!hydrated || submitting}
         className="inline-flex items-center justify-center gap-3 rounded-full bg-[#C6A46A] text-[#080808] font-semibold px-8 py-4 text-xs tracking-[0.2em] uppercase hover:bg-[#d8b87d] disabled:opacity-60 transition-colors min-h-[50px] w-full sm:w-auto"
       >
         <Send aria-hidden="true" className="h-4 w-4" />

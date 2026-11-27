@@ -15,7 +15,10 @@ import { PATCH as patchAdminStories, POST as postAdminStories } from "../src/app
 import { PATCH as patchAdminSettings, PUT as putAdminSettings } from "../src/app/api/admin/settings/route";
 import { POST as seedAdminCatalog } from "../src/app/api/admin/seed/route";
 import { POST as uploadAdminImage } from "../src/app/api/admin/upload/route";
-import { POST as createSession } from "../src/app/api/auth/session/route";
+import {
+  GET as getSession,
+  POST as createSession,
+} from "../src/app/api/auth/session/route";
 
 describe("Route Handlers & Proxy Security", () => {
   it("redirects unauthenticated /admin requests to /admin/login in proxy", () => {
@@ -124,6 +127,17 @@ describe("Route Handlers & Proxy Security", () => {
     });
     const res = await createSession(req);
     expect(res.status).toBe(400);
+
+    const getRes = await getSession();
+    expect(getRes.status).toBe(503);
+
+    const unconfiguredPost = new Request("http://localhost:3000/api/auth/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: "mock-token" }),
+    });
+    const postRes = await createSession(unconfiguredPost);
+    expect(postRes.status).toBe(503);
   });
 
   it("validates public booking input and returns honest 503 when Firebase Admin is unconfigured", async () => {

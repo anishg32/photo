@@ -23,13 +23,39 @@ export async function establishServerAdminSession(user: User): Promise<{
 
   if (!res.ok) {
     const payload = (await res.json().catch(() => ({}))) as { error?: string };
+    const defaultMsg =
+      res.status >= 500
+        ? `Studio server authentication service failed (HTTP ${res.status}). Check server Firebase Admin configuration.`
+        : "Unauthorized: Administrator privileges required.";
     return {
       ok: false,
-      error: payload.error || "Unauthorized: Administrator privileges required.",
+      error: payload.error || defaultMsg,
     };
   }
 
   return { ok: true };
+}
+
+function formatFirebaseSignInError(err: unknown): string {
+  const code = (err as { code?: string })?.code;
+  switch (code) {
+    case "auth/invalid-credential":
+    case "auth/wrong-password":
+    case "auth/user-not-found":
+      return "Incorrect administrator email or password.";
+    case "auth/too-many-requests":
+      return "Too many sign-in attempts. Please wait a moment and try again.";
+    case "auth/network-request-failed":
+      return "Network connection failed while reaching Firebase Authentication.";
+    case "auth/operation-not-allowed":
+      return "Email/Password sign-in is disabled in Firebase Authentication.";
+    case "auth/unauthorized-domain":
+      return "This deployment domain is not authorized in Firebase Authentication.";
+    default:
+      return err instanceof Error
+        ? err.message
+        : "Authentication failed. Verify your administrator credentials.";
+  }
 }
 
 export async function signInAdmin(email: string, password: string) {
@@ -40,7 +66,13 @@ export async function signInAdmin(email: string, password: string) {
     );
   }
 
-  const credential = await signInWithEmailAndPassword(auth, email, password);
+  let credential;
+  try {
+    credential = await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    throw new Error(formatFirebaseSignInError(err));
+  }
+
   const sessionResult = await establishServerAdminSession(credential.user);
   if (!sessionResult.ok) {
     await signOut(auth);

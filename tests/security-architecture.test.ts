@@ -92,4 +92,20 @@ describe("Security Rules & Studio Catalog Integrity", () => {
     expect(gitignore).toContain("serviceAccountKey.json");
     expect(gitignore).toContain("*firebase-adminsdk*.json");
   });
+
+  it("prevents native HTTP POST 405 on client login and booking forms before hydration", () => {
+    const loginSource = fs.readFileSync(
+      path.resolve(process.cwd(), "src/components/admin/AdminLoginClient.tsx"),
+      "utf-8"
+    );
+    const bookingSource = fs.readFileSync(
+      path.resolve(process.cwd(), "src/components/forms/BookingForm.tsx"),
+      "utf-8"
+    );
+
+    expect(loginSource).not.toMatch(/method=["']POST["']/i);
+    expect(loginSource).toContain('type={hydrated ? "submit" : "button"}');
+    expect(bookingSource).not.toMatch(/method=["']POST["']/i);
+    expect(bookingSource).toContain('type={hydrated ? "submit" : "button"}');
+  });
 });

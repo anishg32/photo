@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import {
   Aperture,
@@ -39,7 +38,7 @@ export function AdminLoginClient({
 }: {
   initialNext?: string;
 }) {
-  const router = useRouter();
+  const [hydrated, setHydrated] = useState(false);
   const [destination, setDestination] = useState<string>(initialNext);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,22 +46,29 @@ export function AdminLoginClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    setDestination(initialNext);
+  }, [initialNext]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!hydrated || loading) return;
     setLoading(true);
     setError(null);
 
     try {
       await signInAdmin(email.trim(), password);
-      router.push(destination);
-      router.refresh();
+      window.location.assign(destination);
     } catch (err) {
       const msg =
         err instanceof Error
           ? err.message
           : "Authentication failed. Verify your administrator credentials.";
       setError(msg);
-    } finally {
       setLoading(false);
     }
   };
@@ -95,7 +101,6 @@ export function AdminLoginClient({
 
         <form
           onSubmit={handleSubmit}
-          method="POST"
           className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-5"
         >
           {/* Separate Admin Destination Selector after sign-in */}
@@ -139,14 +144,16 @@ export function AdminLoginClient({
               id="admin-email"
               name="email"
               type="email"
+              inputMode="email"
               required
-              autoComplete="username"
+              autoComplete="email"
               autoCorrect="off"
               autoCapitalize="none"
               spellCheck={false}
+              enterKeyHint="next"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="studio-input w-full rounded-lg px-4 py-3 text-sm"
+              className="studio-input w-full rounded-lg px-4 py-3 text-base sm:text-sm min-h-[48px]"
             />
           </div>
 
@@ -163,7 +170,7 @@ export function AdminLoginClient({
                 aria-pressed={showPassword}
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 onClick={() => setShowPassword((s) => !s)}
-                className="inline-flex items-center gap-1 text-[11px] text-[#A0A0A0] hover:text-[#C6A46A]"
+                className="inline-flex items-center gap-1 text-[11px] text-[#A0A0A0] hover:text-[#C6A46A] min-h-[36px] px-2 -mr-2"
               >
                 {showPassword ? (
                   <>
@@ -184,9 +191,10 @@ export function AdminLoginClient({
               type={showPassword ? "text" : "password"}
               required
               autoComplete="current-password"
+              enterKeyHint="go"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="studio-input w-full rounded-lg px-4 py-3 text-sm"
+              className="studio-input w-full rounded-lg px-4 py-3 text-base sm:text-sm min-h-[48px]"
             />
           </div>
 
@@ -201,12 +209,18 @@ export function AdminLoginClient({
           )}
 
           <button
-            type="submit"
-            disabled={loading}
+            type={hydrated ? "submit" : "button"}
+            disabled={!hydrated || loading}
             className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#C6A46A] text-[#080808] font-semibold py-3.5 px-6 text-xs tracking-[0.18em] uppercase hover:bg-[#d8b87d] disabled:opacity-60 transition-colors min-h-[48px]"
           >
             <Lock aria-hidden="true" className="h-4 w-4" />
-            <span>{loading ? "Verifying Credentials..." : "Sign In to Studio"}</span>
+            <span>
+              {!hydrated
+                ? "Initializing Studio..."
+                : loading
+                  ? "Verifying Credentials..."
+                  : "Sign In to Studio"}
+            </span>
           </button>
 
           <p className="text-[11px] text-center text-[#888888] pt-1">

@@ -29,11 +29,27 @@ function shouldUseSecureCookie(request: Request): boolean {
 }
 
 export async function GET() {
-  const admin = await verifyAdminFromSessionCookie();
-  if (!admin) {
+  try {
+    const auth = getAdminAuth();
+    if (!auth) {
+      return NextResponse.json(
+        {
+          authenticated: false,
+          error:
+            "Firebase Admin SDK is not configured. Check server environment variables.",
+        },
+        { status: 503 }
+      );
+    }
+
+    const admin = await verifyAdminFromSessionCookie();
+    if (!admin) {
+      return NextResponse.json({ authenticated: false }, { status: 401 });
+    }
+    return NextResponse.json({ authenticated: true, admin });
+  } catch {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
-  return NextResponse.json({ authenticated: true, admin });
 }
 
 export async function POST(request: Request) {
