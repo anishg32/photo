@@ -11,6 +11,11 @@ import {
   type FirebaseStorage,
 } from "firebase/storage";
 import {
+  getAnalytics,
+  isSupported as isAnalyticsSupported,
+  type Analytics,
+} from "firebase/analytics";
+import {
   initializeAppCheck,
   ReCaptchaV3Provider,
   getToken,
@@ -23,6 +28,7 @@ import {
 } from "./env";
 
 let appCheckInstance: AppCheck | null = null;
+let analyticsInstance: Analytics | null = null;
 let emulatorsConnected = false;
 
 export function getFirebaseApp(): FirebaseApp | null {
@@ -42,6 +48,9 @@ export function getFirebaseApp(): FirebaseApp | null {
     storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    ...(env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+      ? { measurementId: env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID }
+      : {}),
   });
 }
 
@@ -94,6 +103,26 @@ export function getClientStorage(): FirebaseStorage | null {
   const storage = getStorage(app);
   connectEmulatorsIfEnabled(auth, db, storage);
   return storage;
+}
+
+export async function initClientAnalytics(): Promise<Analytics | null> {
+  if (typeof window === "undefined") return null;
+  if (analyticsInstance) return analyticsInstance;
+
+  const app = getFirebaseApp();
+  const env = getPublicEnv();
+  if (!app || !env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID) {
+    return null;
+  }
+
+  try {
+    const supported = await isAnalyticsSupported();
+    if (!supported) return null;
+    analyticsInstance = getAnalytics(app);
+    return analyticsInstance;
+  } catch {
+    return null;
+  }
 }
 
 export function initClientAppCheck(): AppCheck | null {

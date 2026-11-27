@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { initClientAppCheck } from "@/lib/firebase";
+import { initClientAnalytics, initClientAppCheck } from "@/lib/firebase";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -75,6 +75,7 @@ function SmoothScrollAndTriggers() {
 export function AppProviders({ children }: { children: ReactNode }) {
   useEffect(() => {
     initClientAppCheck();
+    void initClientAnalytics();
   }, []);
 
   return (

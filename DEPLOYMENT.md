@@ -38,7 +38,7 @@ Set environment variables locally in `.env.local` (copied from `.env.example`), 
 
 ```bash
 # 1. Assign server-side `admin: true` custom claim + `users/{uid}` role
-npm run set-admin -- admin@mjphotography.art "MJ Studio Admin"
+npm run set-admin -- vishnumj112004@gmail.com "MJ Studio Admin"
 
 # 2. Seed initial 10 categories, featured plates, 3 stories, and site settings
 npm run seed
@@ -58,6 +58,7 @@ npm run seed
      - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
      - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
      - `NEXT_PUBLIC_FIREBASE_APP_ID`
+     - `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID`
      - `NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY`
      - `NEXT_PUBLIC_SITE_URL` (`https://your-domain.com`)
    - **Server-Only (NEVER prefix with `NEXT_PUBLIC_`)**:
