@@ -103,6 +103,10 @@ service cloud.firestore {
     match /rate_limits/{key} {
       allow read, write: if false;
     }
+
+    match /media_assets/{assetId} {
+      allow read, write: if false;
+    }
   }
 }
 

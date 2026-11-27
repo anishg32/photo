@@ -47,6 +47,9 @@ yarn-error.log*
 serviceAccountKey.json
 *firebase-adminsdk*.json
 
+# Local media uploads (Storage-free fallback)
+/uploads/
+
 # vercel
 .vercel
 

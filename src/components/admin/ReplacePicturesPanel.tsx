@@ -162,8 +162,8 @@ export function ReplacePicturesPanel({
           </h1>
           <p className="text-sm text-[#A0A0A0] max-w-2xl">
             Swap any sample or live photograph across the Homepage Hero, Studio
-            Portrait, Categories, Gallery Archive, and Editorial Stories. Replaced
-            Firebase Storage files are cleaned up automatically.
+            Portrait, Categories, Gallery Archive, and Editorial Stories.
+            Replaced upload assets are cleaned up automatically.
           </p>
         </div>
 

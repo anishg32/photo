@@ -9,6 +9,10 @@ import {
   MAX_IMAGE_UPLOAD_BYTES,
   slugify,
 } from "../src/lib/validation";
+import {
+  inferImageMimeType,
+  resolveSafeMediaSegments,
+} from "../src/lib/media-paths";
 
 describe("Validation Schemas", () => {
   it("accepts a valid photography booking enquiry", () => {
@@ -121,6 +125,17 @@ describe("Validation Schemas", () => {
     expect(slugify("Wedding & Portrait Photography!")).toBe(
       "wedding-portrait-photography"
     );
+  });
+
+  it("validates local/Firestore media paths and rejects directory traversal", () => {
+    const ok = resolveSafeMediaSegments(["gallery", "17000-venice.jpg"]);
+    expect(ok).not.toBeNull();
+    expect(ok?.docId).toBe("gallery__17000-venice.jpg");
+    expect(inferImageMimeType("thumb.webp")).toBe("image/webp");
+
+    expect(resolveSafeMediaSegments(["etc", "passwd"])).toBeNull();
+    expect(resolveSafeMediaSegments(["gallery", "../secret.json"])).toBeNull();
+    expect(resolveSafeMediaSegments(["gallery", "a", "b"])).toBeNull();
   });
 });
 

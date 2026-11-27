@@ -68,7 +68,7 @@ export function ImageUploadField({
         } else {
           setStatus({
             type: "error",
-            text: res.error || "Upload failed. Check Firebase Storage config.",
+            text: res.error || "Upload failed. Check server configuration.",
           });
         }
       } catch {
@@ -108,7 +108,7 @@ export function ImageUploadField({
             className="w-full h-2 accent-[#C6A46A]"
           />
           <p className="font-mono text-[11px] text-[#A0A0A0]">
-            Uploading to Firebase Storage... {progress}%
+            Uploading studio frame... {progress}%
           </p>
         </div>
       )}

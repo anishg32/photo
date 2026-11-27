@@ -349,9 +349,8 @@ export function GalleryManagerPanel({
               Add Multiple Pictures (Admin Batch Upload)
             </h2>
             <p className="text-xs text-[#A0A0A0] mt-1">
-              Select multiple original photos at once. Originals are stored
-              untouched in Firebase Storage while WebP thumbnails are generated
-              automatically.
+              Select multiple original photos at once. Originals are preserved
+              while WebP thumbnails are generated automatically.
             </p>
           </div>
 
