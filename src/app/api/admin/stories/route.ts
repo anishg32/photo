@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb, verifyAdminRequest } from "@/lib/firebase-admin";
 import { getStories } from "@/lib/firestore";
@@ -56,6 +56,7 @@ export async function POST(request: Request) {
     createdAt: FieldValue.serverTimestamp(),
   });
 
+  revalidateTag("stories", "max");
   revalidatePath("/");
   revalidatePath("/stories");
   revalidatePath(`/stories/${data.slug}`);
@@ -132,6 +133,7 @@ export async function PATCH(request: Request) {
     await deleteStorageObjectsByUrls([prevData.coverImage]);
   }
 
+  revalidateTag("stories", "max");
   revalidatePath("/");
   revalidatePath("/stories");
   if (typeof prevData?.slug === "string" && prevData.slug) {
@@ -182,6 +184,7 @@ export async function DELETE(request: Request) {
     await deleteStorageObjectsByUrls(urlsToDelete);
     await docRef.delete();
   }
+  revalidateTag("stories", "max");
   revalidatePath("/");
   revalidatePath("/stories");
 

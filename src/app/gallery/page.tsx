@@ -2,7 +2,10 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Eye } from "lucide-react";
-import { getCategories, getGalleryImages } from "@/lib/firestore";
+import {
+  getCachedCategories,
+  getCachedGalleryImages,
+} from "@/lib/portfolio-cache";
 import { GalleryExplorer } from "@/components/gallery/GalleryExplorer";
 
 export const metadata: Metadata = {
@@ -13,8 +16,8 @@ export const metadata: Metadata = {
 
 async function GalleryContent() {
   const [categories, gallery] = await Promise.all([
-    getCategories(),
-    getGalleryImages({ limitCount: 100 }),
+    getCachedCategories(),
+    getCachedGalleryImages({ limitCount: 100 }),
   ]);
 
   return (

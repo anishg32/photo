@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb, verifyAdminRequest } from "@/lib/firebase-admin";
 import { getSiteSettings } from "@/lib/firestore";
@@ -49,6 +49,7 @@ export async function PUT(request: Request) {
       { merge: true }
     );
 
+  revalidateTag("site-settings", "max");
   revalidatePath("/");
   revalidatePath("/about");
   revalidatePath("/services");
@@ -129,6 +130,7 @@ export async function PATCH(request: Request) {
     }
   }
 
+  revalidateTag("site-settings", "max");
   revalidatePath("/");
   revalidatePath("/about");
 

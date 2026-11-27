@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getSiteSettings } from "@/lib/firestore";
+import { getCachedSiteSettings } from "@/lib/portfolio-cache";
 import { DEFAULT_SITE_SETTINGS } from "@/lib/studio-catalog";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 async function PrivacyContactEmail() {
-  const settings = await getSiteSettings();
+  const settings = await getCachedSiteSettings();
   return (
     <a
       href={`mailto:${settings.email}`}

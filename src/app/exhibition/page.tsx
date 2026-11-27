@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { getGalleryImages } from "@/lib/firestore";
+import { getCachedGalleryImages } from "@/lib/portfolio-cache";
 import { ExhibitionClient } from "@/components/three/ExhibitionClient";
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 async function ExhibitionContent() {
-  const gallery = await getGalleryImages({ limitCount: 12 });
+  const gallery = await getCachedGalleryImages({ limitCount: 12 });
   return <ExhibitionClient images={gallery.items} />;
 }
 

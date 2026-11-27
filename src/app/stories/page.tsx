@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, MapPin, Calendar } from "lucide-react";
-import { getStories } from "@/lib/firestore";
+import { getCachedStories } from "@/lib/portfolio-cache";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 
 export const metadata: Metadata = {
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 async function StoriesArchive() {
-  const stories = await getStories();
+  const stories = await getCachedStories();
 
   return (
     <div className="space-y-12">

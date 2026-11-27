@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Aperture, Film, Compass } from "lucide-react";
-import { getSiteSettings } from "@/lib/firestore";
+import { getCachedSiteSettings } from "@/lib/portfolio-cache";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 
 export const metadata: Metadata = {
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 async function AboutContent() {
-  const settings = await getSiteSettings();
+  const settings = await getCachedSiteSettings();
 
   return (
     <div className="pt-32 pb-24 bg-[#080808]">

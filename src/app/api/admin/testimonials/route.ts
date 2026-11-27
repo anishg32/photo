@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getAdminDb, verifyAdminRequest } from "@/lib/firebase-admin";
 import { getTestimonials } from "@/lib/firestore";
 import { testimonialModerationSchema } from "@/lib/validation";
@@ -41,6 +41,7 @@ export async function PATCH(request: Request) {
     .doc(parsed.data.id)
     .update({ approved: parsed.data.approved });
 
+  revalidateTag("testimonials", "max");
   revalidatePath("/");
   return NextResponse.json({ ok: true });
 }
@@ -69,6 +70,7 @@ export async function DELETE(request: Request) {
   }
 
   await db.collection("testimonials").doc(id).delete();
+  revalidateTag("testimonials", "max");
   revalidatePath("/");
   return NextResponse.json({ ok: true });
 }

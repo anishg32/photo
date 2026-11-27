@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { InstagramIcon, FacebookIcon } from "@/components/ui/SocialIcons";
-import { getSiteSettings } from "@/lib/firestore";
+import { getCachedSiteSettings } from "@/lib/portfolio-cache";
 import { BookingForm } from "@/components/forms/BookingForm";
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ async function ContactPageContent({
   searchParams: Promise<{ service?: string }>;
 }) {
   const [settings, resolvedParams] = await Promise.all([
-    getSiteSettings(),
+    getCachedSiteSettings(),
     searchParams,
   ]);
 

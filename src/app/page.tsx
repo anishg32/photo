@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import {
-  getCategories,
-  getGalleryImages,
-  getSiteSettings,
-  getStories,
-  getTestimonials,
-} from "@/lib/firestore";
+  getCachedCategories,
+  getCachedGalleryImages,
+  getCachedSiteSettings,
+  getCachedStories,
+  getCachedTestimonials,
+} from "@/lib/portfolio-cache";
 import { HeroSection } from "@/components/hero/HeroSection";
 import { AboutSection } from "@/components/sections/AboutSection";
 import { CategoriesSection } from "@/components/sections/CategoriesSection";
@@ -25,11 +25,11 @@ import {
 async function DynamicPortfolioSections() {
   const [categories, gallery, stories, testimonials, settings] =
     await Promise.all([
-      getCategories(),
-      getGalleryImages({ limitCount: 24 }),
-      getStories(),
-      getTestimonials({ includePending: false }),
-      getSiteSettings(),
+      getCachedCategories(),
+      getCachedGalleryImages({ limitCount: 24 }),
+      getCachedStories(),
+      getCachedTestimonials(),
+      getCachedSiteSettings(),
     ]);
 
   const featuredImages = gallery.items.filter((i) => i.featured);

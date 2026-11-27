@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb, verifyAdminRequest } from "@/lib/firebase-admin";
 import { getGalleryImages } from "@/lib/firestore";
@@ -65,6 +65,7 @@ export async function POST(request: Request) {
     createdAt: FieldValue.serverTimestamp(),
   });
 
+  revalidateTag("gallery", "max");
   revalidatePath("/");
   revalidatePath("/gallery");
   revalidatePath("/categories");
@@ -167,6 +168,7 @@ export async function PATCH(request: Request) {
     ]);
   }
 
+  revalidateTag("gallery", "max");
   revalidatePath("/");
   revalidatePath("/gallery");
   revalidatePath("/categories");
@@ -214,6 +216,7 @@ export async function DELETE(request: Request) {
     await docRef.delete();
   }
 
+  revalidateTag("gallery", "max");
   revalidatePath("/");
   revalidatePath("/gallery");
   revalidatePath("/categories");

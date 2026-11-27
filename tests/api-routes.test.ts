@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+vi.mock("../src/lib/service-account", () => ({
+  resolveServiceAccount: () => null,
+}));
 import { NextRequest } from "next/server";
 import { proxy } from "../src/proxy";
 import { POST as submitBooking } from "../src/app/api/bookings/route";

@@ -1,13 +1,13 @@
 import type { MetadataRoute } from "next";
-import { getCategories, getStories } from "@/lib/firestore";
+import { getCachedCategories, getCachedStories } from "@/lib/portfolio-cache";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL || "https://mjphotography.art";
 
   const [categories, stories] = await Promise.all([
-    getCategories(),
-    getStories(),
+    getCachedCategories(),
+    getCachedStories(),
   ]);
 
   const staticRoutes = [

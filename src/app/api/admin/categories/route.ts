@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb, verifyAdminRequest } from "@/lib/firebase-admin";
 import { getCategories } from "@/lib/firestore";
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
     createdAt: FieldValue.serverTimestamp(),
   });
 
+  revalidateTag("categories", "max");
   revalidatePath("/");
   revalidatePath("/categories");
 
@@ -112,6 +113,7 @@ export async function PATCH(request: Request) {
       await deleteStorageObjectsByUrls([prevData.coverImage]);
     }
 
+    revalidateTag("categories", "max");
     revalidatePath("/");
     revalidatePath("/categories");
     if (typeof prevData?.slug === "string" && prevData.slug) {
@@ -147,6 +149,7 @@ export async function PATCH(request: Request) {
     await deleteStorageObjectsByUrls([prevData.coverImage]);
   }
 
+  revalidateTag("categories", "max");
   revalidatePath("/");
   revalidatePath("/categories");
   revalidatePath(`/categories/${data.slug}`);
@@ -185,6 +188,7 @@ export async function DELETE(request: Request) {
     await docRef.delete();
   }
 
+  revalidateTag("categories", "max");
   revalidatePath("/");
   revalidatePath("/categories");
 

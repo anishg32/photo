@@ -5,10 +5,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import {
-  getCategories,
-  getCategoryBySlug,
-  getGalleryImages,
-} from "@/lib/firestore";
+  getCachedCategories,
+  getCachedCategoryBySlug,
+  getCachedGalleryImages,
+} from "@/lib/portfolio-cache";
 import { INITIAL_CATEGORIES } from "@/lib/studio-catalog";
 import { GalleryExplorer } from "@/components/gallery/GalleryExplorer";
 
@@ -20,7 +20,7 @@ export async function generateMetadata(props: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await props.params;
-  const category = await getCategoryBySlug(slug);
+  const category = await getCachedCategoryBySlug(slug);
   if (!category) {
     return { title: "Category Not Found" };
   }
@@ -37,9 +37,9 @@ async function CategoryDetailContent({
 }) {
   const { slug } = await params;
   const [category, allCategories, gallery] = await Promise.all([
-    getCategoryBySlug(slug),
-    getCategories(),
-    getGalleryImages({ categorySlug: slug, limitCount: 60 }),
+    getCachedCategoryBySlug(slug),
+    getCachedCategories(),
+    getCachedGalleryImages({ categorySlug: slug, limitCount: 60 }),
   ]);
 
   if (!category) {

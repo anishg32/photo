@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, Check } from "lucide-react";
-import { getCategories, getSiteSettings } from "@/lib/firestore";
+import { getCachedCategories, getCachedSiteSettings } from "@/lib/portfolio-cache";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 
 export const metadata: Metadata = {
@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 
 async function ServicesPageContent() {
   const [settings, categories] = await Promise.all([
-    getSiteSettings(),
-    getCategories(),
+    getCachedSiteSettings(),
+    getCachedCategories(),
   ]);
 
   const catMap = new Map(categories.map((c) => [c.slug, c]));

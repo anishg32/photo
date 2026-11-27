@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { getCategories } from "@/lib/firestore";
+import { getCachedCategories } from "@/lib/portfolio-cache";
 
 export const metadata: Metadata = {
   title: "Photography Categories",
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 async function CategoriesGrid() {
-  const categories = await getCategories();
+  const categories = await getCachedCategories();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

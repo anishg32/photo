@@ -4,7 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Calendar, MapPin } from "lucide-react";
-import { getGalleryImages, getStories, getStoryBySlug } from "@/lib/firestore";
+import {
+  getCachedGalleryImages,
+  getCachedStories,
+  getCachedStoryBySlug,
+} from "@/lib/portfolio-cache";
 import { INITIAL_STORIES } from "@/lib/studio-catalog";
 import { ScrollReveal } from "@/components/animations/ScrollReveal";
 
@@ -16,7 +20,7 @@ export async function generateMetadata(props: {
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await props.params;
-  const story = await getStoryBySlug(slug);
+  const story = await getCachedStoryBySlug(slug);
   if (!story) return { title: "Story Not Found" };
   return {
     title: story.title,
@@ -31,9 +35,9 @@ async function StoryDetailContent({
 }) {
   const { slug } = await params;
   const [story, allStories, gallery] = await Promise.all([
-    getStoryBySlug(slug),
-    getStories(),
-    getGalleryImages({ limitCount: 6, featuredOnly: true }),
+    getCachedStoryBySlug(slug),
+    getCachedStories(),
+    getCachedGalleryImages({ limitCount: 6, featuredOnly: true }),
   ]);
 
   if (!story) {

@@ -4,12 +4,12 @@ import {
   getAdminDb,
   verifyOptionalAppCheck,
 } from "@/lib/firebase-admin";
-import { getTestimonials } from "@/lib/firestore";
+import { getCachedTestimonials } from "@/lib/portfolio-cache";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { testimonialCreateSchema } from "@/lib/validation";
 
 export async function GET() {
-  const items = await getTestimonials({ includePending: false });
+  const items = await getCachedTestimonials();
   return NextResponse.json({ items });
 }
 

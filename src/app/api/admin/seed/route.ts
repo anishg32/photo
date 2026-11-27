@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb, verifyAdminRequest } from "@/lib/firebase-admin";
 import {
@@ -62,6 +62,7 @@ export async function POST(request: Request) {
     createdCount++;
   }
 
+  revalidateTag("portfolio", "max");
   revalidatePath("/");
   revalidatePath("/gallery");
   revalidatePath("/categories");

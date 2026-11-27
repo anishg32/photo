@@ -10,7 +10,7 @@ import { AppProviders } from "@/components/providers/AppProviders";
 import { SiteHeader } from "@/components/navigation/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { CinematicPreloader } from "@/components/animations/CinematicPreloader";
-import { getSiteSettings } from "@/lib/firestore";
+import { getCachedSiteSettings } from "@/lib/portfolio-cache";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
 };
 
 async function FooterWithSettings() {
-  const settings = await getSiteSettings();
+  const settings = await getCachedSiteSettings();
   return <SiteFooter settings={settings} />;
 }
 
