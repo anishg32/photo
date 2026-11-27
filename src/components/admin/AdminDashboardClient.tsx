@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -37,7 +37,7 @@ import { StoriesManagerPanel } from "./StoriesManagerPanel";
 import { TestimonialsManagerPanel } from "./TestimonialsManagerPanel";
 import { SettingsManagerPanel } from "./SettingsManagerPanel";
 
-type AdminTab =
+export type AdminTab =
   | "overview"
   | "add-pictures"
   | "replace-pictures"
@@ -50,6 +50,7 @@ type AdminTab =
 
 interface AdminDashboardClientProps {
   admin: { uid: string; email: string; name?: string };
+  initialTab?: AdminTab;
   initialOverview: DashboardOverview;
   initialGallery: GalleryImage[];
   initialCategories: Category[];
@@ -61,6 +62,7 @@ interface AdminDashboardClientProps {
 
 export function AdminDashboardClient({
   admin,
+  initialTab = "overview",
   initialOverview,
   initialGallery,
   initialCategories,
@@ -70,7 +72,11 @@ export function AdminDashboardClient({
   initialSettings,
 }: AdminDashboardClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<AdminTab>("overview");
+  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
   const [overview, setOverview] = useState(initialOverview);
   const [gallery, setGallery] = useState(initialGallery);
   const [categories, setCategories] = useState(initialCategories);
@@ -177,18 +183,23 @@ export function AdminDashboardClient({
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveTab(item.id)}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-xs tracking-[0.14em] uppercase transition-colors shrink-0 min-h-[44px] ${
-                    active
-                      ? "bg-[#C6A46A] text-[#080808] font-semibold"
-                      : "text-[#A0A0A0] hover:text-white hover:bg-white/5"
-                  }`}
-                >
+              const dedicatedHref =
+                item.id === "overview"
+                  ? "/admin"
+                  : item.id === "add-pictures"
+                    ? "/admin/add-pictures"
+                    : item.id === "replace-pictures"
+                      ? "/admin/replace-pictures"
+                      : `/admin?tab=${item.id}`;
+
+              const itemClassName = `flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-xs tracking-[0.14em] uppercase transition-colors shrink-0 min-h-[44px] ${
+                active
+                  ? "bg-[#C6A46A] text-[#080808] font-semibold"
+                  : "text-[#A0A0A0] hover:text-white hover:bg-white/5"
+              }`;
+
+              const content = (
+                <>
                   <span className="flex items-center gap-2.5">
                     <Icon aria-hidden="true" className="h-4 w-4" />
                     <span>{item.label}</span>
@@ -204,6 +215,36 @@ export function AdminDashboardClient({
                       {item.badge}
                     </span>
                   )}
+                </>
+              );
+
+              if (
+                item.id === "add-pictures" ||
+                item.id === "replace-pictures" ||
+                initialTab === "add-pictures" ||
+                initialTab === "replace-pictures"
+              ) {
+                return (
+                  <Link
+                    key={item.id}
+                    href={dedicatedHref}
+                    aria-current={active ? "page" : undefined}
+                    className={itemClassName}
+                  >
+                    {content}
+                  </Link>
+                );
+              }
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  aria-current={active ? "page" : undefined}
+                  className={itemClassName}
+                >
+                  {content}
                 </button>
               );
             })}
@@ -264,14 +305,13 @@ export function AdminDashboardClient({
 
             {/* Admin-Only Quick Picture Operations */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <button
-                type="button"
-                onClick={() => setActiveTab("add-pictures")}
-                className="text-left rounded-2xl border border-[#C6A46A]/40 bg-[#111111] p-6 hover:border-[#C6A46A] transition-colors space-y-2.5 group"
+              <Link
+                href="/admin/add-pictures"
+                className="block rounded-2xl border border-[#C6A46A]/40 bg-[#111111] p-6 hover:border-[#C6A46A] transition-colors space-y-2.5 group"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#C6A46A]">
-                    Admin Option 01
+                    Admin Option 01 · /admin/add-pictures
                   </span>
                   <ImagePlus
                     aria-hidden="true"
@@ -285,16 +325,15 @@ export function AdminDashboardClient({
                   Upload a single high-resolution photograph, batch-upload
                   multiple frames, or add plates to a visual story.
                 </p>
-              </button>
+              </Link>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab("replace-pictures")}
-                className="text-left rounded-2xl border border-[#C6A46A]/40 bg-[#111111] p-6 hover:border-[#C6A46A] transition-colors space-y-2.5 group"
+              <Link
+                href="/admin/replace-pictures"
+                className="block rounded-2xl border border-[#C6A46A]/40 bg-[#111111] p-6 hover:border-[#C6A46A] transition-colors space-y-2.5 group"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#C6A46A]">
-                    Admin Option 02
+                    Admin Option 02 · /admin/replace-pictures
                   </span>
                   <RefreshCw
                     aria-hidden="true"
@@ -308,7 +347,7 @@ export function AdminDashboardClient({
                   Replace any sample or live image across Homepage Hero, About
                   Portrait, Category covers, Gallery frames, and Stories.
                 </p>
-              </button>
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

@@ -134,7 +134,7 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
           <p>
             &copy; {currentYear} {settings.brandName}. All rights reserved.
           </p>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-5">
             <Link href="/privacy" className="hover:text-white transition-colors">
               Privacy Policy
             </Link>
@@ -143,6 +143,18 @@ export function SiteFooter({ settings }: { settings: SiteSettings }) {
               className="hover:text-[#C6A46A] transition-colors"
             >
               Studio Admin
+            </Link>
+            <Link
+              href="/admin/add-pictures"
+              className="hover:text-[#C6A46A] transition-colors"
+            >
+              Add Pictures
+            </Link>
+            <Link
+              href="/admin/replace-pictures"
+              className="hover:text-[#C6A46A] transition-colors"
+            >
+              Replace Pictures
             </Link>
           </div>
         </div>

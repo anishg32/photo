@@ -3,7 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Aperture, ArrowUpRight } from "lucide-react";
+import {
+  Menu,
+  X,
+  Aperture,
+  ArrowUpRight,
+  Lock,
+  ImagePlus,
+  RefreshCw,
+  ChevronDown,
+  LayoutDashboard,
+} from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -16,11 +26,34 @@ const NAV_LINKS = [
   { href: "/contact", label: "Contact" },
 ];
 
+const ADMIN_MENU_LINKS = [
+  {
+    href: "/admin",
+    label: "Admin Dashboard",
+    description: "Overview, Bookings & Settings",
+    icon: LayoutDashboard,
+  },
+  {
+    href: "/admin/add-pictures",
+    label: "Add Pictures",
+    description: "Upload Single, Batch & Story Plates",
+    icon: ImagePlus,
+  },
+  {
+    href: "/admin/replace-pictures",
+    label: "Replace Pictures",
+    description: "Swap Hero, Portrait, Covers & Gallery",
+    icon: RefreshCw,
+  },
+];
+
 export function SiteHeader({ brandName = "MJ PHOTOGRAPHY" }: { brandName?: string }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
   const drawerRef = useRef<HTMLDialogElement>(null);
+  const adminMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => {
@@ -31,14 +64,36 @@ export function SiteHeader({ brandName = "MJ PHOTOGRAPHY" }: { brandName?: strin
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Close mobile drawer smoothly on route navigation
+  // Close mobile drawer and admin dropdown smoothly on route navigation
   useEffect(() => {
+    setAdminMenuOpen(false);
     const dialog = drawerRef.current;
     if (dialog?.open) {
       dialog.close();
       setDrawerOpen(false);
     }
   }, [pathname]);
+
+  useEffect(() => {
+    if (!adminMenuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (
+        adminMenuRef.current &&
+        !adminMenuRef.current.contains(e.target as Node)
+      ) {
+        setAdminMenuOpen(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAdminMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [adminMenuOpen]);
 
   // Safari fallback for light-dismiss outside click on native <dialog>
   useEffect(() => {
@@ -160,7 +215,65 @@ export function SiteHeader({ brandName = "MJ PHOTOGRAPHY" }: { brandName?: strin
             </ul>
           </nav>
 
-          <div className="flex items-center gap-3 shrink-0 pl-2">
+          <div className="flex items-center gap-2.5 shrink-0 pl-2">
+            {/* Separate Admin Options Menu (Admin-Only routes) */}
+            <div ref={adminMenuRef} className="relative hidden sm:block">
+              <button
+                type="button"
+                onClick={() => setAdminMenuOpen((open) => !open)}
+                aria-expanded={adminMenuOpen}
+                aria-haspopup="menu"
+                aria-label="Admin options"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/5 px-3.5 py-2 text-[11px] font-medium tracking-[0.15em] uppercase text-white/90 hover:border-[#C6A46A] hover:text-[#C6A46A] transition-colors min-h-[40px] whitespace-nowrap"
+              >
+                <Lock aria-hidden="true" className="h-3.5 w-3.5 text-[#C6A46A]" />
+                <span>Admin</span>
+                <ChevronDown
+                  aria-hidden="true"
+                  className={`h-3.5 w-3.5 transition-transform ${
+                    adminMenuOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {adminMenuOpen && (
+                <div
+                  role="menu"
+                  aria-label="Admin pages"
+                  className="absolute right-0 mt-2.5 w-72 rounded-2xl border border-white/15 bg-[#0c0c0c]/95 backdrop-blur-xl p-2 shadow-2xl space-y-1 z-50"
+                >
+                  <p className="px-3 pt-1.5 pb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-[#C6A46A]">
+                    Admin-Only Controls
+                  </p>
+                  {ADMIN_MENU_LINKS.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        role="menuitem"
+                        onClick={() => setAdminMenuOpen(false)}
+                        className="flex items-start gap-3 rounded-xl px-3 py-2.5 hover:bg-white/[0.07] transition-colors group"
+                      >
+                        <Icon
+                          aria-hidden="true"
+                          className="h-4 w-4 text-[#C6A46A] mt-0.5 shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium uppercase tracking-[0.14em] text-white group-hover:text-[#C6A46A]">
+                            {item.label}
+                          </p>
+                          <p className="text-[11px] text-[#9A9A9A] truncate">
+                            {item.description}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             <Link
               href="/contact"
               className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[#C6A46A] px-5 py-2 text-[11px] font-semibold tracking-[0.16em] uppercase text-[#080808] hover:bg-[#d8b87d] transition-colors min-h-[40px] whitespace-nowrap"
@@ -217,7 +330,7 @@ export function SiteHeader({ brandName = "MJ PHOTOGRAPHY" }: { brandName?: strin
               </button>
             </div>
 
-            <nav aria-label="Mobile" className="mt-8">
+            <nav aria-label="Mobile" className="mt-8 space-y-6">
               <ul className="space-y-2 list-none p-0 m-0">
                 {NAV_LINKS.map((item, idx) => {
                   const active = isActive(item.href);
@@ -244,6 +357,29 @@ export function SiteHeader({ brandName = "MJ PHOTOGRAPHY" }: { brandName?: strin
                   );
                 })}
               </ul>
+
+              <div className="pt-5 border-t border-white/10 space-y-2">
+                <p className="px-4 font-mono text-[10px] uppercase tracking-[0.2em] text-[#C6A46A]">
+                  Admin-Only Pages
+                </p>
+                {ADMIN_MENU_LINKS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={closeDrawer}
+                      className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/85 hover:bg-white/5 hover:text-[#C6A46A] transition-colors min-h-[44px]"
+                    >
+                      <Icon
+                        aria-hidden="true"
+                        className="h-4 w-4 text-[#C6A46A]"
+                      />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </nav>
           </div>
 

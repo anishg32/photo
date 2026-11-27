@@ -23,6 +23,22 @@ describe("Route Handlers & Proxy Security", () => {
     const res = proxy(req);
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toContain("/admin/login");
+
+    const addReq = new NextRequest("http://localhost:3000/admin/add-pictures");
+    const addRes = proxy(addReq);
+    expect(addRes.status).toBe(307);
+    expect(addRes.headers.get("location")).toContain(
+      "/admin/login?next=%2Fadmin%2Fadd-pictures"
+    );
+
+    const replaceReq = new NextRequest(
+      "http://localhost:3000/admin/replace-pictures"
+    );
+    const replaceRes = proxy(replaceReq);
+    expect(replaceRes.status).toBe(307);
+    expect(replaceRes.headers.get("location")).toContain(
+      "/admin/login?next=%2Fadmin%2Freplace-pictures"
+    );
   });
 
   it("allows /admin/login without session cookie and attaches security headers", () => {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Aperture,
@@ -10,16 +10,53 @@ import {
   Lock,
   AlertCircle,
   ArrowLeft,
+  LayoutDashboard,
+  ImagePlus,
+  RefreshCw,
 } from "lucide-react";
 import { signInAdmin } from "@/lib/firebase-auth";
 
-export default function AdminLoginPage() {
+const ADMIN_DESTINATIONS = [
+  {
+    path: "/admin",
+    label: "Admin Dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    path: "/admin/add-pictures",
+    label: "Add Pictures",
+    icon: ImagePlus,
+  },
+  {
+    path: "/admin/replace-pictures",
+    label: "Replace Pictures",
+    icon: RefreshCw,
+  },
+] as const;
+
+function sanitizeAdminNext(rawNext: string | null): string {
+  if (!rawNext) return "/admin";
+  if (/^\/admin(?:\/[a-z0-9-]+)?$/.test(rawNext)) {
+    return rawNext;
+  }
+  return "/admin";
+}
+
+function AdminLoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [destination, setDestination] = useState<string>(() =>
+    sanitizeAdminNext(searchParams.get("next"))
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDestination(sanitizeAdminNext(searchParams.get("next")));
+  }, [searchParams]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -28,7 +65,7 @@ export default function AdminLoginPage() {
 
     try {
       await signInAdmin(email.trim(), password);
-      router.push("/admin");
+      router.push(destination);
       router.refresh();
     } catch (err) {
       const msg =
@@ -72,6 +109,36 @@ export default function AdminLoginPage() {
           method="POST"
           className="liquid-glass rounded-2xl p-6 sm:p-8 space-y-5"
         >
+          {/* Separate Admin Destination Selector after sign-in */}
+          <div className="space-y-2">
+            <span className="block text-[11px] tracking-[0.14em] uppercase text-[#A0A0A0]">
+              Open After Sign-In
+            </span>
+            <div className="grid grid-cols-3 gap-2">
+              {ADMIN_DESTINATIONS.map((dest) => {
+                const Icon = dest.icon;
+                const selected = destination === dest.path;
+                return (
+                  <button
+                    key={dest.path}
+                    type="button"
+                    onClick={() => setDestination(dest.path)}
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-2 py-2.5 text-[10px] uppercase tracking-[0.1em] transition-colors ${
+                      selected
+                        ? "border-[#C6A46A] bg-[#C6A46A]/15 text-[#C6A46A] font-semibold"
+                        : "border-white/10 bg-[#0b0b0b] text-[#A0A0A0] hover:text-white"
+                    }`}
+                  >
+                    <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+                    <span className="text-center leading-tight">
+                      {dest.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div>
             <label
               htmlFor="admin-email"
@@ -163,3 +230,16 @@ export default function AdminLoginPage() {
   );
 }
 
+export default function AdminLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#080808] flex items-center justify-center font-mono text-xs uppercase tracking-[0.22em] text-[#C6A46A]">
+          Loading Admin Portal...
+        </div>
+      }
+    >
+      <AdminLoginFormContent />
+    </Suspense>
+  );
+}
