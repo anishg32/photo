@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { verifyAdminFromSessionCookie } from "@/lib/firebase-admin";
 import {
   getBookings,
@@ -21,6 +22,7 @@ async function AuthenticatedPortal({
   initialTab: AdminTab;
   searchParamsPromise?: Promise<{ tab?: string }>;
 }) {
+  await connection();
   const resolvedSearch = searchParamsPromise ? await searchParamsPromise : {};
   const tabParam = resolvedSearch.tab;
   const effectiveTab: AdminTab =
