@@ -8,6 +8,26 @@ import {
 
 const SESSION_EXPIRES_IN_MS = 5 * 24 * 60 * 60 * 1000; // 5 days
 
+/**
+ * Sets `Secure` only when the incoming request arrived over HTTPS so production
+ * deployments stay hardened while `next start` on `http://localhost` works across Safari/Chrome.
+ */
+function shouldUseSecureCookie(request: Request): boolean {
+  const forwardedProto = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim()
+    .toLowerCase();
+  if (forwardedProto) {
+    return forwardedProto === "https";
+  }
+  try {
+    return new URL(request.url).protocol === "https:";
+  } catch {
+    return process.env.NODE_ENV === "production";
+  }
+}
+
 export async function GET() {
   const admin = await verifyAdminFromSessionCookie();
   if (!admin) {
@@ -66,9 +86,11 @@ export async function POST(request: Request) {
       },
     });
 
+    const secureCookie = shouldUseSecureCookie(request);
+
     response.cookies.set(ADMIN_SESSION_COOKIE_NAME, sessionCookie, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: secureCookie,
       sameSite: "lax",
       maxAge: Math.floor(SESSION_EXPIRES_IN_MS / 1000),
       path: "/",
@@ -83,11 +105,11 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const response = NextResponse.json({ authenticated: false });
   response.cookies.set(ADMIN_SESSION_COOKIE_NAME, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookie(request),
     sameSite: "lax",
     maxAge: 0,
     path: "/",
