@@ -12,38 +12,9 @@ import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { getAppCheck } from "firebase-admin/app-check";
 import { cookies } from "next/headers";
+import { resolveServiceAccount } from "./service-account";
 
 export const ADMIN_SESSION_COOKIE_NAME = "__mj_admin_session";
-
-function parseServiceAccountFromEnv() {
-  const jsonKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (jsonKey) {
-    const parsed = JSON.parse(jsonKey) as {
-      project_id?: string;
-      client_email?: string;
-      private_key?: string;
-    };
-    if (parsed.project_id && parsed.client_email && parsed.private_key) {
-      return {
-        projectId: parsed.project_id,
-        clientEmail: parsed.client_email,
-        privateKey: parsed.private_key.replace(/\\n/g, "\n"),
-      };
-    }
-  }
-
-  const projectId =
-    process.env.FIREBASE_PROJECT_ID ||
-    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-
-  if (projectId && clientEmail && privateKey) {
-    return { projectId, clientEmail, privateKey };
-  }
-
-  return null;
-}
 
 export function isFirebaseAdminConfigured(): boolean {
   if (
@@ -54,7 +25,7 @@ export function isFirebaseAdminConfigured(): boolean {
     return true;
   }
   return Boolean(
-    parseServiceAccountFromEnv() || process.env.GOOGLE_APPLICATION_CREDENTIALS
+    resolveServiceAccount() || process.env.GOOGLE_APPLICATION_CREDENTIALS
   );
 }
 
@@ -96,7 +67,7 @@ export function getAdminApp(): App | null {
     });
   }
 
-  const serviceAccount = parseServiceAccountFromEnv();
+  const serviceAccount = resolveServiceAccount();
   if (serviceAccount) {
     return initializeApp({
       credential: cert(serviceAccount),

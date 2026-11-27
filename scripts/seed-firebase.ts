@@ -1,6 +1,7 @@
 import "./load-env";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { resolveServiceAccount } from "../src/lib/service-account";
 import {
   DEFAULT_SITE_SETTINGS,
   INITIAL_CATEGORIES,
@@ -10,25 +11,18 @@ import {
 
 async function main() {
   if (!getApps().length) {
-    const jsonKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    if (jsonKey) {
-      initializeApp({ credential: cert(JSON.parse(jsonKey)) });
-    } else if (
-      process.env.FIREBASE_PROJECT_ID &&
-      process.env.FIREBASE_CLIENT_EMAIL &&
-      process.env.FIREBASE_PRIVATE_KEY
-    ) {
+    const serviceAccount = resolveServiceAccount();
+    if (serviceAccount) {
       initializeApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-        }),
+        credential: cert(serviceAccount),
+        projectId: serviceAccount.projectId,
       });
     } else {
       initializeApp({
         projectId:
-          process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "mj-photography-local",
+          process.env.FIREBASE_PROJECT_ID ||
+          process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+          "mj-photography-local",
       });
     }
   }

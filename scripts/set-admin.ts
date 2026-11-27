@@ -2,10 +2,11 @@ import "./load-env";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { resolveServiceAccount } from "../src/lib/service-account";
 
 /**
  * Trusted server-side CLI utility to grant administrator role + Firebase custom claims.
- * Usage: npx tsx scripts/set-admin.ts admin@mjphotography.art "MJ Studio Admin"
+ * Usage: npx tsx scripts/set-admin.ts vishnumj112004@gmail.com "MJ Studio Admin"
  */
 async function main() {
   const email = process.argv[2]?.trim();
@@ -17,26 +18,18 @@ async function main() {
   }
 
   if (!getApps().length) {
-    const jsonKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-    if (jsonKey) {
-      const parsed = JSON.parse(jsonKey);
-      initializeApp({ credential: cert(parsed) });
-    } else if (
-      process.env.FIREBASE_PROJECT_ID &&
-      process.env.FIREBASE_CLIENT_EMAIL &&
-      process.env.FIREBASE_PRIVATE_KEY
-    ) {
+    const serviceAccount = resolveServiceAccount();
+    if (serviceAccount) {
       initializeApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-        }),
+        credential: cert(serviceAccount),
+        projectId: serviceAccount.projectId,
       });
     } else {
       initializeApp({
         projectId:
-          process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "mj-photography-local",
+          process.env.FIREBASE_PROJECT_ID ||
+          process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+          "mj-photography-local",
       });
     }
   }

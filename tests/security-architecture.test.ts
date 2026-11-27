@@ -84,5 +84,12 @@ describe("Security Rules & Studio Catalog Integrity", () => {
     expect(storageRules).toContain("match /categories/{allPaths=**}");
     expect(storageRules).toContain("match /stories/{allPaths=**}");
     expect(storageRules).toContain("50 * 1024 * 1024");
+
+    const gitignore = fs.readFileSync(
+      path.resolve(process.cwd(), ".gitignore"),
+      "utf-8"
+    );
+    expect(gitignore).toContain("serviceAccountKey.json");
+    expect(gitignore).toContain("*firebase-adminsdk*.json");
   });
 });

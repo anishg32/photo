@@ -43,6 +43,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# Firebase Admin private keys (NEVER commit)
+serviceAccountKey.json
+*firebase-adminsdk*.json
+
 # vercel
 .vercel
 
