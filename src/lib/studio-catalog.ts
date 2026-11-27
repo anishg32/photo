@@ -111,8 +111,8 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   aboutHeadline: "BEHIND EVERY LENS, THERE IS A STORY.",
   aboutBio:
     "Founded on the belief that enduring photographs are sculpted from patience, shadow, and human presence, MJ PHOTOGRAPHY bridges classic medium-format cinema with contemporary fine-art portraiture. Every commission is approached like a quiet motion picture—observing fleeting light, honest gestures, and architectural stillness so each frame resonates decades from today.",
-  email: "studio@mjphotography.art",
-  phone: "+1 (212) 555-0194",
+  email: "vishnumj112004@gmail.com",
+  phone: "+91 98841 53308",
   studioAddress: "Atelier District, New York & Worldwide Commissions",
   instagramUrl: "https://instagram.com",
   facebookUrl: "https://facebook.com",

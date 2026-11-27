@@ -36,6 +36,8 @@ describe("Security Rules & Studio Catalog Integrity", () => {
     }
     expect(DEFAULT_SITE_SETTINGS.brandName).toBe("MJ PHOTOGRAPHY");
     expect(DEFAULT_SITE_SETTINGS.tagline).toBe("EVERY FRAME TELLS A STORY.");
+    expect(DEFAULT_SITE_SETTINGS.email).toBe("vishnumj112004@gmail.com");
+    expect(DEFAULT_SITE_SETTINGS.phone).toBe("+91 98841 53308");
   });
 
   it("verifies every referenced local sample photograph exists in public/", () => {

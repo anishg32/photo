@@ -1,12 +1,27 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { getSiteSettings } from "@/lib/firestore";
+import { DEFAULT_SITE_SETTINGS } from "@/lib/studio-catalog";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
     "How MJ PHOTOGRAPHY collects, protects, and manages booking enquiry details and photography assets.",
 };
+
+async function PrivacyContactEmail() {
+  const settings = await getSiteSettings();
+  return (
+    <a
+      href={`mailto:${settings.email}`}
+      className="text-[#C6A46A] underline underline-offset-4"
+    >
+      {settings.email}
+    </a>
+  );
+}
 
 export default function PrivacyPage() {
   return (
@@ -79,12 +94,18 @@ export default function PrivacyPage() {
             <p>
               You may request access to, correction of, or permanent deletion of
               your booking enquiry information at any time by contacting{" "}
-              <a
-                href="mailto:studio@mjphotography.art"
-                className="text-[#C6A46A] underline underline-offset-4"
+              <Suspense
+                fallback={
+                  <a
+                    href={`mailto:${DEFAULT_SITE_SETTINGS.email}`}
+                    className="text-[#C6A46A] underline underline-offset-4"
+                  >
+                    {DEFAULT_SITE_SETTINGS.email}
+                  </a>
+                }
               >
-                studio@mjphotography.art
-              </a>
+                <PrivacyContactEmail />
+              </Suspense>
               .
             </p>
           </section>
